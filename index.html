@@ -24,7 +24,7 @@
             this.loadingFeed = true;
             this.articles = [];
             try {
-                const response = await fetch(`http://127.0.0.1:8000/api/news?region=${this.region}&category=${this.category}`);
+                const response = await fetch(`https://ai-news-backend-ty0t.onrender.com/api/news?region=${this.region}&category=${this.category}`);
                 const data = await response.json();
                 if (data.status === 'success') {
                     this.articles = data.articles;
@@ -42,7 +42,7 @@
             this.aiExplanation = '';
             this.aiDeepContext = '';
             try {
-                const response = await fetch('http://127.0.0.1:8000/api/analyze', {
+                const response = await fetch('https://ai-news-backend-ty0t.onrender.com/api/analyze', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ title: article.title, link: article.link })

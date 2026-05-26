@@ -34,7 +34,7 @@ function NewsSection({
         setLoading(true);
 
         const response = await fetch(
-          `http://127.0.0.1:8000/api/news?region=${selectedRegion}&category=${selectedCategory}`
+          `https://ai-news-backend-ty0t.onrender.com/api/news?region=${selectedRegion}&category=${selectedCategory}`
         );
 
         const data = await response.json();
@@ -70,7 +70,7 @@ function NewsSection({
       setLoadingCard(uniqueId);
 
       const response = await fetch(
-        "http://127.0.0.1:8000/api/analyze",
+        "https://ai-news-backend-ty0t.onrender.com/api/analyze",
         {
           method: "POST",
 
