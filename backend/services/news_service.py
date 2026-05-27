@@ -1,292 +1,324 @@
 import feedparser
 import requests
-import random
 import time
+
 from bs4 import BeautifulSoup
 from newspaper import Article
+
 from datetime import datetime, timedelta
 
-# ─────────────────────────────────────────────
-# PAN-INDIA INCLUSIVE GEO-FILTERING KEYWORDS
-# ─────────────────────────────────────────────
-# Expanded verification filter to prevent geographic bias and capture all parts of India
-INDIA_GEO_KEYWORDS = [
-    "india", "indian", "rupee", "crore", "lakh", "rbi", "pmo", "isro", "bjp", "congress", "aadhaar", "sensex", "nifty",
-    # South India (Telangana, Andhra Pradesh, Karnataka, Tamil Nadu, Kerala)
-    "hyderabad", "telangana", "andhra", "visakhapatnam", "amaravati", "bengaluru", "karnataka", "chennai", "tamil nadu", "kerala", "kochi", "thiruvananthapuram",
-    # East & Northeast India (West Bengal, Bihar, Odisha, Jharkhand, Assam, and sister states)
-    "kolkata", "west bengal", "bihar", "patna", "odisha", "bhubaneswar", "jharkhand", "ranchi", "assam", "guwahati", "manipur", "meghalaya", "mizoram", "nagaland", "tripura", "sikkim", "arunachal",
-    # West & Central India (Maharashtra, Gujarat, Rajasthan, Madhya Pradesh, Chhattisgarh, Goa)
-    "mumbai", "maharashtra", "pune", "gujarat", "ahmedabad", "gandhinagar", "rajasthan", "jaipur", "madhya pradesh", "bhopal", "chhattisgarh", "raipur", "goa",
-    # North India (Delhi, Punjab, Haryana, Uttar Pradesh, Uttarakhand, Himachal, Jammu & Kashmir)
-    "delhi", "new delhi", "punjab", "chandigarh", "haryana", "uttar pradesh", "lucknow", "kanpur", "ayodhya", "noida", "uttarakhand", "dehradun", "himachal", "shimla", "jammu", "kashmir"
-]
 
 # ─────────────────────────────────────────────
-# RSS FEEDS (GEOGRAPHICALLY DIVERSIFIED)
+# RSS FEEDS
 # ─────────────────────────────────────────────
+
 RSS_FEEDS = {
+
     "India": {
+
         "All": [
+
             "https://timesofindia.indiatimes.com/rssfeedstopstories.cms",
             "https://feeds.feedburner.com/ndtvnews-top-stories",
             "https://indianexpress.com/section/india/feed/",
             "https://www.thehindu.com/news/national/feeder/default.rss"
         ],
+
         "Politics": [
+
             "https://www.thehindu.com/news/national/feeder/default.rss",
             "https://indianexpress.com/section/political-pulse/feed/"
         ],
+
         "Technology": [
+
             "https://feeds.feedburner.com/gadgets360-latest",
             "https://tech.hindustantimes.com/rss/topnews/rssfeed.xml"
         ],
+
         "Business": [
+
             "https://www.moneycontrol.com/rss/business.xml",
             "https://www.livemint.com/rss/markets"
         ],
+
         "Sports": [
+
             "https://www.espncricinfo.com/rss/content/story/feeds/0.xml",
             "https://sports.ndtv.com/rss/all"
         ],
+
         "Entertainment": [
+
             "https://www.bollywoodhungama.com/rss/news.xml",
             "https://www.ndtv.com/entertainment/feed"
         ]
     },
+
+
     "World": {
+
         "All": [
+
             "http://rss.cnn.com/rss/edition.rss",
             "http://feeds.bbci.co.uk/news/rss.xml",
-            "https://www.france24.com/en/rss",          # Balanced European, African & Global lens
-            "https://rss.dw.com/rdf/rss-en-all",        # Global perspective from Deutsche Welle
+            "https://www.france24.com/en/rss",
+            "https://rss.dw.com/rdf/rss-en-all",
             "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml"
         ],
+
         "Politics": [
+
             "http://rss.cnn.com/rss/cnn_allpolitics.rss",
             "https://feeds.bbci.co.uk/news/politics/rss.xml",
             "https://www.france24.com/en/europe/rss"
         ],
+
         "Technology": [
+
             "https://techcrunch.com/feed/",
             "https://www.theverge.com/rss/index.xml",
             "https://www.france24.com/en/business-tech/rss"
         ],
+
         "Business": [
+
             "https://rss.dw.com/rdf/rss-en-bus",
             "https://www.cnbc.com/id/10001147/device/rss/rss.html"
         ],
+
         "Sports": [
+
             "https://www.espn.com/espn/rss/news",
-            "https://sports.yahoo.com/top/rss.xml",
-            "https://www.france24.com/en/sport/rss"
+            "https://sports.yahoo.com/top/rss.xml"
         ],
+
         "Entertainment": [
+
             "https://www.hollywoodreporter.com/feed/",
-            "https://variety.com/feed/",
-            "https://www.france24.com/en/culture/rss"
+            "https://www.billboard.com/feed/"
         ]
     }
 }
 
-CATEGORY_KEYWORDS = {
-    "Technology": [
-        "ai", "technology", "tech", "software", "google",
-        "microsoft", "apple", "startup", "cyber", "robot"
-    ],
-
-    "Business": [
-        "market", "stock", "business", "economy",
-        "finance", "trade", "invest", "crypto"
-    ],
-
-    "Sports": [
-        "cricket", "football", "match", "sports",
-        "ipl", "fifa", "tennis", "olympics"
-    ],
-
-    "Entertainment": [
-        "movie", "film", "actor", "music",
-        "celebrity", "hollywood", "bollywood"
-    ],
-
-    "Politics": [
-        "government", "minister", "election",
-        "parliament", "policy", "politics"
-    ]
-}
 
 # ─────────────────────────────────────────────
 # FETCH NEWS
 # ─────────────────────────────────────────────
+
 def fetch_news(region="India", category="All"):
+
     articles = []
+
+    seen_titles = set()
+
     feeds = RSS_FEEDS.get(region, {}).get(category, [])
+
     time_threshold = datetime.utcnow() - timedelta(hours=24)
 
     for url in feeds:
-        try:
-            # Cache-Busting: Append dynamic Unix timestamp to bypass stale intermediary network caches
-            timestamp = int(time.time())
-            cache_bust_url = f"{url}&t={timestamp}" if "?" in url else f"{url}?t={timestamp}"
-            
-            feed = feedparser.parse(cache_bust_url)
-            entries = feed.entries[:20]
 
-            # Randomize initial parsing sequence order
+        try:
+
+            timestamp = int(time.time())
+
+            cache_bust_url = (
+
+                f"{url}&t={timestamp}"
+
+                if "?" in url
+
+                else f"{url}?t={timestamp}"
+            )
+
+            feed = feedparser.parse(cache_bust_url)
+
+            entries = feed.entries[:35]
 
             for entry in entries:
-                try:
-                    published = None
-                    if hasattr(entry, "published_parsed"):
-                        published = datetime(*entry.published_parsed[:6])
 
-                    # Skip stale documents past our 24-hour retention gate
+                try:
+
+                    published = None
+
+                    if hasattr(entry, "published_parsed"):
+
+                        published = datetime(
+                            *entry.published_parsed[:6]
+                        )
+
+                    # Skip old news
                     if published and published < time_threshold:
                         continue
 
                     title = entry.get("title", "No Title")
-                    link = entry.get("link", "")
-                    summary = entry.get("summary", "")
-                    # Softer Category Filtering
 
-                    # Clean raw HTML syntax from RSS summary payload
-                    summary = BeautifulSoup(summary, "html.parser").get_text()
+                    # Clean title
+                    title = title.replace(
+                        " - Times of India",
+                        ""
+                    )
 
-                    # 💡 Programmatic English-Only Guard: Instantly drop any non-ASCII text layers
-                    if not title.isascii() or not summary.isascii():
+                    title = title.replace(
+                        " | CNN",
+                        ""
+                    )
+
+                    title = title.replace(
+                        " - BBC News",
+                        ""
+                    )
+
+                    title = title.strip()
+
+                    # Duplicate removal
+                    title_key = title.lower()
+
+                    if title_key in seen_titles:
                         continue
 
-                    # Source metadata extraction and string optimization
+                    seen_titles.add(title_key)
+
+                    link = entry.get("link", "")
+
+                    summary = entry.get("summary", "")
+
+                    summary = BeautifulSoup(
+                        summary,
+                        "html.parser"
+                    ).get_text()
+
                     raw_source = (
+
                         feed.feed.title
-                        if hasattr(feed, "feed") and hasattr(feed.feed, "title")
+
+                        if hasattr(feed, "feed")
+                        and hasattr(feed.feed, "title")
+
                         else "Unknown"
                     )
 
-                    if "|" in raw_source:
-                        source = raw_source.split("|")[-1].strip()
-                    elif " - " in raw_source:
-                        source = raw_source.split(" - ")[-1].strip()
-                    elif len(raw_source) > 30:
-                        source = raw_source[:28].strip() + "…"
-                    else:
-                        source = raw_source
+                    source = raw_source.strip()
 
                     article_data = {
+
                         "title": title,
-                        "link": link,
+
+                        "description": summary[:250],
+
                         "summary": summary,
+
+                        "link": link,
+
                         "source": source,
-                        "published": published
+
+                        "region": region,
+
+                        "category": category,
                     }
+
                     articles.append(article_data)
 
                 except Exception:
                     continue
-        except Exception:
-            continue
-
-    # Remove duplicates matching exactly via document URLs
-    unique_articles = []
-    seen_links = set()
-    for article in articles:
-        if article["link"] not in seen_links:
-            unique_articles.append(article)
-            seen_links.add(article["link"])
-
-    # Sort chronological array directly by chronological freshness
-    unique_articles.sort(
-        key=lambda x: x["published"] if x["published"] else datetime.min,
-        reverse=True
-    )
-
-    # Slice the highest quality real-time candidates and introduce dynamic feed shuffling
-    latest_pool = unique_articles[:30]
-
-    # Ensure minimum article count
-    if len(latest_pool) < 5:
-
-         fallback_feeds = RSS_FEEDS.get(region, {}).get("All", [])
-
-    for url in fallback_feeds:
-
-        try:
-
-            feed = feedparser.parse(url)
-
-            entries = feed.entries[:10]
-
-            for entry in entries:
-
-                title = entry.get("title", "No Title")
-
-                # Skip duplicates
-                if any(
-                    article["title"] == title
-                    for article in latest_pool
-                ):
-                    continue
-
-                summary = entry.get("summary", "")
-
-                summary = BeautifulSoup(
-                    summary,
-                    "html.parser"
-                ).get_text()
-
-                latest_pool.append({
-
-                    "title": title,
-
-                    "description": summary[:250],
-
-                    "summary": summary,
-
-                    "link": entry.get("link", ""),
-
-                    "source": "Fallback",
-
-                    "region": region,
-
-                    "category": category,
-                })
-
-                if len(latest_pool) >= 5:
-                    break
 
         except Exception:
             continue
 
-    return latest_pool
+
+    # ─────────────────────────────────────────
+    # ENSURE MINIMUM 5 ARTICLES
+    # ─────────────────────────────────────────
+
+    if len(articles) < 5:
+
+        fallback_feeds = RSS_FEEDS.get(region, {}).get("All", [])
+
+        for url in fallback_feeds:
+
+            try:
+
+                feed = feedparser.parse(url)
+
+                entries = feed.entries[:10]
+
+                for entry in entries:
+
+                    title = entry.get("title", "No Title")
+
+                    if any(
+                        article["title"] == title
+                        for article in articles
+                    ):
+                        continue
+
+                    summary = entry.get("summary", "")
+
+                    summary = BeautifulSoup(
+                        summary,
+                        "html.parser"
+                    ).get_text()
+
+                    articles.append({
+
+                        "title": title,
+
+                        "description": summary[:250],
+
+                        "summary": summary,
+
+                        "link": entry.get("link", ""),
+
+                        "source": "Fallback",
+
+                        "region": region,
+
+                        "category": category,
+                    })
+
+                    if len(articles) >= 5:
+                        break
+
+            except Exception:
+                continue
+
+    return articles
+
 
 # ─────────────────────────────────────────────
-# EXTRACT FULL ARTICLE
+# ARTICLE EXTRACTION
 # ─────────────────────────────────────────────
+
 def extract_full_article(url):
-    # Primary parsing pipeline using Newspaper3k
+
     try:
+
         article = Article(url)
+
         article.download()
+
         article.parse()
-        text = article.text
 
-        if text and len(text) > 200:
-            return text
+        return {
+
+            "text": article.text,
+
+            "authors": article.authors,
+
+            "publish_date": str(article.publish_date),
+
+            "top_image": article.top_image,
+        }
+
     except Exception:
-        pass
 
-    # Secondary bulletproof fallback utilizing BeautifulSoup
-    try:
-        response = requests.get(
-            url,
-            timeout=10,
-            headers={"User-Agent": "Mozilla/5.0"}
-        )
-        soup = BeautifulSoup(response.text, "html.parser")
-        paragraphs = soup.find_all("p")
-        text = " ".join([p.get_text() for p in paragraphs])
+        return {
 
-        return text
-    except Exception:
-        return ""
+            "text": "Unable to fetch article.",
+
+            "authors": [],
+
+            "publish_date": None,
+
+            "top_image": "",
+        }
