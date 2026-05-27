@@ -83,9 +83,12 @@ function NewsControls({
 
               value={selectedRegion}
 
-              onChange={(e) =>
-                setSelectedRegion(e.target.value)
-              }
+              onChange={(e) => {
+
+              setSelectedRegion(e.target.value);
+
+              setSelectedCategory("All");
+              }}
 
               className="
                 w-full

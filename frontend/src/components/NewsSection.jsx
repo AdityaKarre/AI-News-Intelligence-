@@ -137,23 +137,28 @@ function NewsSection({
   };
 
 
+  useEffect(() => {
+
+  const handleBackButton = () => {
+
+    if (expandedCard) {
+
+      setExpandedCard(null);
+    }
+  };
+
+  window.addEventListener("popstate", handleBackButton);
+
+  return () => {
+
+    window.removeEventListener("popstate", handleBackButton);
+  };
+
+  }, [expandedCard]);
+
   return (
 
     <section className="relative z-10 px-4 sm:px-6 lg:px-10 pb-20">
-
-      {/* Header */}
-      <div className="max-w-6xl mx-auto mb-8 mt-6">
-
-        <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white">
-          {selectedRegion} {selectedCategory} News
-        </h2>
-
-        <p className="text-gray-400 mt-3 text-sm sm:text-base lg:text-lg">
-          Real-time AI-enhanced news intelligence dashboard.
-        </p>
-
-      </div>
-
 
       {/* Loading */}
       {loading ? (
@@ -240,14 +245,19 @@ function NewsSection({
 
                   {/* Title */}
                   <h3
-                    className="
-                      text-white
-                      text-xl
-                      sm:text-2xl
-                      font-bold
-                      leading-snug
-                    "
-                  >
+                    className={`
+                    text-white
+                    font-bold
+                    leading-snug
+                    break-words
+
+                    ${
+                      article.title?.length > 120
+                      ? "text-base sm:text-lg"
+                      : "text-lg sm:text-xl lg:text-2xl"
+                    }
+                    `}
+                    >
                     {article.title}
                   </h3>
 
