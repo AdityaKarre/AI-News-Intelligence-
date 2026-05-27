@@ -148,13 +148,20 @@ const CATEGORY_FILTERS = {
 // ─────────────────────────────────────────────
 // FILTER FUNCTION
 // ─────────────────────────────────────────────
+// ─────────────────────────────────────────────
+// COMPREHENSIVE FILTER & DYNAMIC DEMO SHUFFLER
+// ─────────────────────────────────────────────
 function filterArticles(articles, category) {
+  if (!articles || articles.length === 0) return [];
+
   if (category === "All" || !CATEGORY_FILTERS[category]) {
-    return articles;
+    // For "All", still shuffle slightly on refresh to show distinct news
+    return [...articles].sort(() => 0.5 - Math.random()).slice(0, 8);
   }
 
   const { block, allow } = CATEGORY_FILTERS[category];
 
+  // Pass 1: Strict match
   let filtered = articles.filter((article) => {
     const text = ((article.title || "") + " " + (article.description || "")).toLowerCase();
     for (const word of block) {
@@ -166,16 +173,24 @@ function filterArticles(articles, category) {
     return false;
   });
 
-  if (filtered.length < 5) {
+  // Pass 2: High Density Pad (If under 6 articles, bring in pristine general entries)
+  if (filtered.length < 6) {
     const backupArticles = articles.filter((article) => {
       if (filtered.some(f => (f.link || f.title) === (article.link || article.title))) return false;
       const text = ((article.title || "") + " " + (article.description || "")).toLowerCase();
       return !block.some(word => text.includes(word.toLowerCase()));
     });
-    filtered = [...filtered, ...backupArticles];
+    
+    // Shuffle the backup pool so different articles appear on every refresh click
+    const shuffledBackup = [...backupArticles].sort(() => 0.5 - Math.random());
+    filtered = [...filtered, ...shuffledBackup];
+  } else {
+    // Even if we have plenty of strict articles, shuffle them so the user gets distinct layouts
+    filtered = [...filtered].sort(() => 0.5 - Math.random());
   }
 
-  return filtered;
+  // Always return a robust set of distinct articles (sliced up to 8 max)
+  return filtered.slice(0, 8);
 }
 
 // ─────────────────────────────────────────────
