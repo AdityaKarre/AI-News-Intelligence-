@@ -134,7 +134,6 @@ def fetch_news(region="India", category="All"):
             entries = feed.entries[:20]
 
             # Randomize initial parsing sequence order
-            random.shuffle(entries)
 
             for entry in entries:
                 try:
@@ -146,20 +145,24 @@ def fetch_news(region="India", category="All"):
                     if published and published < time_threshold:
                         continue
 
-                    clean_title = title.lower()
-
                     title = entry.get("title", "No Title")
                     link = entry.get("link", "")
                     summary = entry.get("summary", "")
-                    # Strict Category Filtering
+                    # Softer Category Filtering
                     if category != "All":
 
-                        keywords = CATEGORY_KEYWORDS.get(category, [])
+                        keywords = CATEGORY_KEYWORDS.get(category,[])
 
-                        combined_text = f"{title} {summary}".lower()
+                        combined_text = (f"{title} {summary}").lower()
 
-                    if not any(keyword in combined_text for keyword in keywords):
-                        continue
+                        score = sum(
+                            keyword in combined_text
+                                for keyword in keywords
+                        )
+
+                    # Only skip if VERY unrelated
+                        if score == 0 and len(summary) > 80:
+                            continue
                     
 
                     # Clean raw HTML syntax from RSS summary payload
@@ -168,12 +171,6 @@ def fetch_news(region="India", category="All"):
                     # 💡 Programmatic English-Only Guard: Instantly drop any non-ASCII text layers
                     if not title.isascii() or not summary.isascii():
                         continue
-
-                    # Regional Filter (India): Keep things highly inclusive across all major zones
-                    if region == "India":
-                        combined_text = f"{title} {summary}".lower()
-                        if not any(keyword in combined_text for keyword in INDIA_GEO_KEYWORDS):
-                            continue
 
                     # Source metadata extraction and string optimization
                     raw_source = (
@@ -221,7 +218,6 @@ def fetch_news(region="India", category="All"):
 
     # Slice the highest quality real-time candidates and introduce dynamic feed shuffling
     latest_pool = unique_articles[:30]
-    random.shuffle(latest_pool)
 
     return latest_pool
 
