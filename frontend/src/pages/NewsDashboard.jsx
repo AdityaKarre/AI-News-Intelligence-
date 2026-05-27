@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowUp, Home } from "lucide-react";
 
 import Navbar from "../components/Navbar";
