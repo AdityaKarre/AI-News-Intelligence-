@@ -4,43 +4,26 @@ const API_BASE = "https://ai-news-backend-ty0t.onrender.com";
 
 // ─────────────────────────────────────────────
 // CATEGORY FILTER MAP
-//
-// Two-pass filter:
-//   1. BLOCK  — hide immediately if any word matches
-//   2. ALLOW  — only show if at least one word matches
-//
-// Written to specifically fix the TOI/NDTV bleed
-// seen in the screenshot (politics, crime, religion
-// appearing under Technology / Sports etc.)
 // ─────────────────────────────────────────────
 const CATEGORY_FILTERS = {
-
   Technology: {
-    // Block these topics no matter what
     block: [
-      // Politics / Govt
       "parliament", "minister", "election", "vote", "party", "congress",
       "bjp", "aap", "lok sabha", "rajya sabha", "mla", "mp ", " mp ",
       "chief minister", "cm ", "governor", "politician", "modi",
       "rahul gandhi", "amit shah", "kejriwal", "yogi",
-      // Crime / Law
       "murder", "rape", "assault", "arrest", "police", "court",
       "verdict", "sentence", "accused", "criminal", "fir ", "custody",
       "bail", "judge", "justice", "tribunal",
-      // Religion / Social
       "temple", "mosque", "church", "bakrid", "eid", "diwali",
       "ramadan", "hindu", "muslim", "christian", "religion",
-      "protest", "riot", "violence", "communal",
-      // Sports
+      "protest", "riot", "violence", "communal", "highway", "accident",
       "cricket", "ipl", "football", "tennis", "match", "tournament",
       "player", "team", "wicket", "goal", "score",
-      // Entertainment
       "bollywood", "movie", "film", "actor", "actress", "celebrity",
       "song", "album", "box office", "ott",
-      // Economy (non-tech)
       "inflation", "gdp", "rupee", "budget", "tax", "sensex", "nifty",
     ],
-    // Must have at least one of these
     allow: [
       "tech", "technology", "software", "hardware", "app", "apps",
       "smartphone", "phone", "laptop", "computer", "chip", "semiconductor",
@@ -61,25 +44,18 @@ const CATEGORY_FILTERS = {
       "elon musk", "sam altman", "sundar pichai", "jensen huang",
     ],
   },
-
   Sports: {
     block: [
-      // Politics
       "parliament", "minister", "election", "vote", "party", "bjp",
       "congress", "lok sabha", "chief minister", "governor",
-      // Crime
       "murder", "rape", "assault", "arrest", "court", "verdict",
       "accused", "criminal", "fir",
-      // Religion
       "temple", "mosque", "bakrid", "eid", "diwali", "religion",
       "protest", "riot", "communal",
-      // Tech
       "software", "hardware", "chip", "smartphone", "ai ",
       "machine learning", "cybersecurity", "cloud",
-      // Business
       "stock market", "sensex", "nifty", "inflation", "gdp",
       "budget", "tax", "rupee", "ipo",
-      // Entertainment
       "bollywood", "movie", "film", "actor", "actress", "song",
       "album", "box office",
     ],
@@ -98,21 +74,15 @@ const CATEGORY_FILTERS = {
       "lebron", "neymar", "mbappé", "verstappen",
     ],
   },
-
   Business: {
     block: [
-      // Politics (non-economic)
       "election", "vote", "party", "bjp", "congress", "lok sabha",
-      // Crime
       "murder", "rape", "assault", "arrest", "court", "verdict",
       "accused", "fir",
-      // Religion
       "temple", "mosque", "bakrid", "eid", "diwali", "religion",
       "protest", "riot", "communal",
-      // Pure entertainment
       "bollywood", "movie", "film", "actor", "actress", "song",
       "box office", "ott",
-      // Pure sports
       "cricket match", "ipl match", "football match", "wicket",
     ],
     allow: [
@@ -129,21 +99,14 @@ const CATEGORY_FILTERS = {
       "crude", "oil", "gold", "commodity", "forex",
     ],
   },
-
   Entertainment: {
     block: [
-      // Politics
       "parliament", "minister", "election", "lok sabha",
       "chief minister", "governor", "bjp", "congress",
-      // Crime
       "murder", "rape", "assault", "arrest", "fir", "court",
-      // Religion (non-entertainment)
       "bakrid", "riot", "communal",
-      // Business
       "stock market", "sensex", "nifty", "inflation", "ipo",
-      // Tech
       "software", "chip", "semiconductor", "cybersecurity",
-      // Sports (non-celebrity)
       "wicket", "innings", "goal", "penalty", "ipl score",
     ],
     allow: [
@@ -159,16 +122,12 @@ const CATEGORY_FILTERS = {
       "taylor swift", "beyoncé", "rihanna", "drake",
     ],
   },
-
   Politics: {
     block: [
-      // Pure entertainment
       "bollywood", "movie", "film", "box office", "actor",
       "actress", "song", "album",
-      // Pure sports
       "cricket score", "ipl score", "football score",
       "wicket", "goal scored", "match result",
-      // Pure tech
       "software update", "app launch", "smartphone launch",
       "chip release",
     ],
@@ -190,9 +149,6 @@ const CATEGORY_FILTERS = {
 
 // ─────────────────────────────────────────────
 // FILTER FUNCTION
-// Returns filtered list.
-// Safety net: if < 3 survive, returns original
-// so screen is never blank.
 // ─────────────────────────────────────────────
 function filterArticles(articles, category) {
   if (category === "All" || !CATEGORY_FILTERS[category]) {
@@ -219,8 +175,9 @@ function filterArticles(articles, category) {
     return false;
   });
 
-  // Safety net
-  return filtered.length >= 3 ? filtered : articles;
+  // Safe Threshold Adjustment: If we find clean data, return it.
+  // Only fall back to original array if absolutely 0 matches survived.
+  return filtered.length > 0 ? filtered : articles;
 }
 
 // ─────────────────────────────────────────────
@@ -274,8 +231,17 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
         const fetched  = data.news || data.articles || [];
         const filtered = filterArticles(fetched, selectedCategory);
 
-        if (filtered.length === 0) {
-          setError("No articles found for this category right now. Try refreshing.");
+        // Enhanced Check: Ensure we actually got high-quality filtered matches
+        const originalFilteredLength = fetched.filter(a => {
+          const t = ((a.title || "") + " " + (a.description || "")).toLowerCase();
+          const { block } = CATEGORY_FILTERS[selectedCategory] || { block: [] };
+          return !block.some(word => t.includes(word.toLowerCase()));
+        }).length;
+
+        if (filtered.length === 0 || (selectedCategory !== "All" && originalFilteredLength === 0)) {
+          setArticles([]);
+          setError("No pure curated articles found for this category right now. Hit Refresh to poll fresh updates.");
+          return;
         }
 
         setArticles(filtered);
@@ -355,17 +321,32 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
   return (
     <section className="relative z-10 px-4 sm:px-6 lg:px-10 pb-20">
 
+      {/* Premium Skeleton Loader */}
       {loading && (
-        <div className="text-center text-gray-400 py-20 animate-pulse">
-          Loading AI News Intelligence...
+        <div className="max-w-6xl mx-auto flex flex-col gap-5">
+          {[1, 2, 3].map((n) => (
+            <div key={n} className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-xl animate-pulse">
+              <div className="flex justify-between items-center mb-4">
+                <div className="h-5 w-24 bg-purple-500/20 rounded-full"></div>
+                <div className="h-4 w-16 bg-white/10 rounded"></div>
+              </div>
+              <div className="h-6 bg-white/10 rounded-md w-3/4 mb-3"></div>
+              <div className="h-6 bg-white/10 rounded-md w-1/2 mb-4"></div>
+              <div className="h-4 bg-white/5 rounded w-full mb-2"></div>
+              <div className="h-4 bg-white/5 rounded w-5/6"></div>
+            </div>
+          ))}
         </div>
       )}
 
       {!loading && error && (
         <div className="max-w-2xl mx-auto mt-16 text-center">
-          <div className="bg-red-500/10 border border-red-400/20 rounded-2xl px-6 py-8">
-            <p className="text-red-300 text-base font-medium mb-1">Something went wrong</p>
-            <p className="text-gray-400 text-sm">{error}</p>
+          <div className="bg-purple-950/20 border border-purple-500/30 backdrop-blur-xl rounded-2xl px-6 py-10 shadow-xl shadow-purple-950/50">
+            <div className="w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center mx-auto mb-4 border border-purple-500/20">
+              <span className="text-purple-300 text-xl font-bold">!</span>
+            </div>
+            <p className="text-purple-200 text-lg font-semibold mb-2">Feed Under Optimization</p>
+            <p className="text-gray-400 text-sm max-w-md mx-auto leading-relaxed">{error}</p>
           </div>
         </div>
       )}
@@ -384,8 +365,8 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
                   bg-white/5 border rounded-2xl backdrop-blur-xl
                   transition-all duration-300 overflow-hidden
                   ${isExpanded
-                    ? "border-purple-400/30"
-                    : "border-white/10 hover:border-purple-400/20"}
+                    ? "border-purple-400/30 shadow-lg shadow-purple-950/40"
+                    : "border-white/10 hover:border-purple-400/20 hover:bg-white/[0.07]"}
                 `}
               >
                 {/* Card Header */}
@@ -395,10 +376,10 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
                 >
                   <div className="flex items-center justify-between gap-3 flex-wrap">
                     <div className="flex items-center gap-3 flex-wrap">
-                      <span className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-200 text-xs">
+                      <span className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-200 text-xs font-medium tracking-wide">
                         {article.source}
                       </span>
-                      <span className="text-gray-400 text-xs sm:text-sm">
+                      <span className="text-gray-400 text-xs sm:text-sm font-medium">
                         {article.category}
                       </span>
                     </div>
@@ -409,7 +390,7 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
 
                   <h3
                     className={`
-                      text-white font-bold leading-snug break-words
+                      text-white font-bold leading-snug break-words tracking-tight
                       ${article.title?.length > 120
                         ? "text-base sm:text-lg"
                         : "text-lg sm:text-xl lg:text-2xl"}
@@ -431,16 +412,18 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
                   <div className="px-5 sm:px-6 pb-6">
 
                     {loadingCard === uniqueId && !analysis && (
-                      <div className="bg-white/5 border border-white/10 rounded-2xl p-5 text-gray-300 animate-pulse">
-                        Generating AI Intelligence...
+                      <div className="bg-white/5 border border-white/10 rounded-2xl p-5 text-gray-300 animate-pulse flex flex-col gap-3">
+                        <div className="h-4 bg-purple-400/20 rounded w-1/4"></div>
+                        <div className="h-3 bg-white/10 rounded w-full"></div>
+                        <div className="h-3 bg-white/10 rounded w-5/6"></div>
                       </div>
                     )}
 
                     {analysis && (
                       <div className="flex flex-col gap-5">
 
-                        <div className="bg-purple-500/10 border border-purple-400/20 rounded-2xl p-5">
-                          <h4 className="text-purple-200 text-lg font-semibold mb-3">AI Summary</h4>
+                        <div className="bg-purple-500/10 border border-purple-400/20 rounded-2xl p-5 shadow-inner">
+                          <h4 className="text-purple-200 text-lg font-semibold mb-3 tracking-wide">AI Summary</h4>
                           <p className="text-gray-200 leading-8 text-sm sm:text-base">
                             {analysis.summary}
                           </p>
@@ -455,7 +438,7 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
                               );
                             }}
                             className="w-full py-3 rounded-xl bg-indigo-500/10 border border-indigo-400/20
-                              text-indigo-200 font-medium hover:bg-indigo-500/20 transition-all"
+                              text-indigo-200 font-medium hover:bg-indigo-500/20 transition-all active:scale-[0.99]"
                           >
                             {deepContextCard === uniqueId ? "Hide Deep Context" : "View Deep Context"}
                           </button>
@@ -463,8 +446,8 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
                           <div className={`overflow-hidden transition-all duration-500
                             ${deepContextCard === uniqueId ? "max-h-[400px] opacity-100 mt-4" : "max-h-0 opacity-0"}`}
                           >
-                            <div className="bg-indigo-500/10 border border-indigo-400/20 rounded-2xl p-5 max-h-[400px] overflow-y-auto">
-                              <h4 className="text-indigo-200 text-lg font-semibold mb-3">Deep Context</h4>
+                            <div className="bg-indigo-500/10 border border-indigo-400/20 rounded-2xl p-5 max-h-[400px] overflow-y-auto custom-scrollbar">
+                              <h4 className="text-indigo-200 text-lg font-semibold mb-3 tracking-wide">Deep Context</h4>
                               <p className="text-gray-200 leading-8 whitespace-pre-line text-sm sm:text-base">
                                 {analysis.deepContext}
                               </p>
@@ -472,10 +455,10 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
                           </div>
                         </div>
 
-                        <a href={article.link} target="_blank" rel="noopener noreferrer">
+                        <a href={article.link} target="_blank" rel="noopener noreferrer" className="block w-full">
                           <button className="w-full py-3.5 rounded-xl
                             bg-gradient-to-r from-purple-500 to-indigo-500
-                            text-white font-semibold hover:opacity-90 transition-all">
+                            text-white font-semibold hover:opacity-90 active:scale-[0.99] transition-all shadow-md shadow-purple-950/20">
                             Read Full Article
                           </button>
                         </a>
