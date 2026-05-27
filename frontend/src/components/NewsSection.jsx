@@ -22,10 +22,7 @@ function NewsSection({
   // Fetch News
   useEffect(() => {
 
-    window.scrollTo({
-      top: 0,
-      behavior: "instant"
-    });
+    window.scrollTo(0, 0);
 
     const fetchNews = async () => {
 
@@ -374,19 +371,21 @@ function NewsSection({
 
                               ${
                                 deepContextCard === uniqueId
-                                  ? "max-h-[1200px] opacity-100 mt-4"
+                                  ? "max-h-[400px] opacity-100 mt-4"
                                   : "max-h-0 opacity-0"
                               }
                             `}
                           >
 
                             <div
-                              className="
+                                className="
                                 bg-indigo-500/10
                                 border border-indigo-400/20
                                 rounded-2xl
                                 p-5
-                              "
+                                max-h-[400px]
+                                overflow-y-auto
+                                "
                             >
 
                               <h4 className="text-indigo-200 text-lg font-semibold mb-3">

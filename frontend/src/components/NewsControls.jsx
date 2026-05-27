@@ -30,22 +30,25 @@ function NewsControls({
 
   return (
 
-    <div
-      className="
-        bg-white/5
+      <div
+        className="
+        sticky
+        top-3
+        z-40
+        bg-[#050816]/80
+        backdrop-blur-2xl
         border border-white/10
-        backdrop-blur-xl
         rounded-2xl
-        p-4 sm:p-5
+        p-3
       "
-    >
+      >
 
       <div
         className="
           flex
           flex-col
           lg:flex-row
-          gap-4
+          gap-3
           lg:items-center
           lg:justify-between
         "
@@ -57,7 +60,7 @@ function NewsControls({
             flex
             flex-col
             sm:flex-row
-            gap-4
+            gap-3
             w-full
           "
         >
@@ -90,7 +93,7 @@ function NewsControls({
                 border border-white/10
                 rounded-xl
                 px-4
-                py-3
+                py-2.5
                 text-white
                 outline-none
                 focus:border-purple-400/40
@@ -141,7 +144,7 @@ function NewsControls({
                 border border-white/10
                 rounded-xl
                 px-4
-                py-3
+                py-2.5
                 text-white
                 outline-none
                 focus:border-purple-400/40
@@ -177,7 +180,7 @@ function NewsControls({
               w-full
               lg:w-auto
               px-6
-              py-3
+              py-2.5
               rounded-xl
               bg-gradient-to-r
               from-purple-500

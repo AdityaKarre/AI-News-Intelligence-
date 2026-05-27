@@ -65,44 +65,8 @@ function NewsDashboard() {
       <Navbar />
 
 
-      {/* Dashboard Header */}
-      <div className="relative z-10 pt-36 sm:pt-40 px-4 sm:px-6 lg:px-10">
-
-        <div className="max-w-6xl mx-auto">
-
-          <h1
-            className="
-              text-3xl
-              sm:text-4xl
-              lg:text-5xl
-              font-bold
-              text-white
-            "
-          >
-            Live AI News Dashboard
-          </h1>
-
-          <p
-            className="
-              text-gray-400
-              mt-4
-              text-sm
-              sm:text-base
-              lg:text-lg
-              leading-7
-            "
-          >
-            Real-time AI-powered news intelligence with smart summaries,
-            deep contextual analysis, and trusted global coverage.
-          </p>
-
-        </div>
-
-      </div>
-
-
       {/* Controls */}
-      <div className="relative z-10 mt-8 px-4 sm:px-6 lg:px-10">
+      <div className="relative z-10 mt-4 px-4 sm:px-6 lg:px-10">
 
         <div className="max-w-6xl mx-auto">
 
@@ -122,7 +86,7 @@ function NewsDashboard() {
 
 
       {/* News Feed */}
-      <div className="relative z-10 mt-8">
+      <div className="relative z-10 mt-4">
 
         <NewsSection
           selectedRegion={selectedRegion}
