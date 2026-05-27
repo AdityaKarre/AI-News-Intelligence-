@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 const API_BASE = "https://ai-news-backend-ty0t.onrender.com";
 
 // ─────────────────────────────────────────────
-// OPTIMIZED CATEGORY FILTER MAP
+// HIGH-DENSITY CATEGORY FILTER MAP
 // ─────────────────────────────────────────────
 const CATEGORY_FILTERS = {
   Technology: {
@@ -36,12 +36,11 @@ const CATEGORY_FILTERS = {
       "tesla", "nvidia", "intel", "samsung", "qualcomm", "amd",
       "gadget", "device", "wearable", "smartwatch", "tablet",
       "launch", "release", "update", "version", "feature",
-      "blockchain", "crypto", "bitcoin", "web3",
-      "startup", "unicorn", "funding", "series a", "series b",
-      "innovation", "patent", "research", "digital",
-      "playstation", "xbox", "gaming", "gpu", "processor",
-      "iphone", "android", "pixel", "galaxy", "oneplus",
-      "elon musk", "sam altman", "sundar pichai", "jensen huang",
+      "blockchain", "crypto", "bitcoin", "web3", "startup", "unicorn", 
+      "funding", "innovation", "patent", "research", "digital",
+      "playstation", "xbox", "gaming", "gpu", "processor", "iphone", 
+      "android", "pixel", "galaxy", "oneplus", "screen", "display", 
+      "battery", "charging", "online", "server", "system", "platform"
     ],
   },
   Sports: {
@@ -68,10 +67,8 @@ const CATEGORY_FILTERS = {
       "goal", "score", "fixture", "series", "test match", "odi", "t20",
       "grand slam", "wimbledon", "formula 1", "f1", "racing",
       "marathon", "athlete", "sport", "sports", "final", "semifinal",
-      "stadium", "transfer", "debut", "hat-trick", "penalty",
-      "virat kohli", "rohit sharma", "dhoni", "bumrah",
-      "messi", "ronaldo", "federer", "nadal", "djokovic",
-      "lebron", "neymar", "mbappé", "verstappen",
+      "stadium", "transfer", "debut", "hat-trick", "penalty", "game",
+      "play", "won", "lost", "win", "defeat", "victory", "stumper", "clash"
     ],
   },
   Business: {
@@ -94,10 +91,10 @@ const CATEGORY_FILTERS = {
       "dollar", "sensex", "nifty", "bse", "nse", "rbi", "fed",
       "interest rate", "merger", "acquisition", "deal", "billion",
       "million", "quarter", "annual", "results", "growth", "recession",
-      "employment", "job", "layoff", "hire", "ceo", "cfo",
-      "business", "commerce", "retail", "ecommerce", "supply chain",
-      "crude", "oil", "gold", "commodity", "forex", "chemical", "industry",
-      "stores", "sales", "brands", "growth", "retailer", "earnings"
+      "employment", "job", "layoff", "hire", "ceo", "cfo", "business", 
+      "commerce", "retail", "ecommerce", "supply chain", "crude", "oil", 
+      "gold", "commodity", "forex", "chemical", "stores", "sales", "brands", 
+      "retailer", "prices", "firm", "factory", "manufacture", "production", "commercial"
     ],
   },
   Entertainment: {
@@ -120,8 +117,7 @@ const CATEGORY_FILTERS = {
       "streaming", "web series", "entertainment", "concert", "tour",
       "fashion", "red carpet", "interview", "debut", "premiere",
       "television", "channel", "theatre", "screen", "songs", "teaser",
-      "shah rukh", "salman", "deepika", "ranveer", "alia",
-      "taylor swift", "beyoncé", "rihanna", "drake",
+      "drama", "episode", "music video", "track", "singles", "starrer"
     ],
   },
   Politics: {
@@ -144,13 +140,13 @@ const CATEGORY_FILTERS = {
       "campaign", "rally", "coalition", "majority", "minority",
       "modi", "biden", "trump", "rahul", "shah", "zelensky",
       "war", "conflict", "ceasefire", "un ", "nato", "g20", "g7",
-      "lok sabha", "assembly", "mla", "mp ",
+      "lok sabha", "assembly", "mla", "mp ", "leaders", "state", "centre"
     ],
   },
 };
 
 // ─────────────────────────────────────────────
-// FILTER FUNCTION
+// COMPREHENSIVE FILTER & MULTIPLIER FUNCTION
 // ─────────────────────────────────────────────
 function filterArticles(articles, category) {
   if (category === "All" || !CATEGORY_FILTERS[category]) {
@@ -159,10 +155,9 @@ function filterArticles(articles, category) {
 
   const { block, allow } = CATEGORY_FILTERS[category];
 
-  // 1. First Pass: Strict Filter (Only pristine matches)
+  // Pass 1: Strict match
   let filtered = articles.filter((article) => {
     const text = ((article.title || "") + " " + (article.description || "")).toLowerCase();
-    
     for (const word of block) {
       if (text.includes(word.toLowerCase())) return false;
     }
@@ -172,22 +167,18 @@ function filterArticles(articles, category) {
     return false;
   });
 
-  // 2. Second Pass: If we have fewer than 5 articles, grab safe fallback articles
+  // Pass 2: High Density Pad (If under 5 articles, bring in pristine, block-free general entries)
   if (filtered.length < 5) {
-    const fallbackArticles = articles.filter((article) => {
-      // Make sure it isn't already in our strict list
+    const backupArticles = articles.filter((article) => {
       if (filtered.some(f => (f.link || f.title) === (article.link || article.title))) return false;
-      
       const text = ((article.title || "") + " " + (article.description || "")).toLowerCase();
-      // Ensure it doesn't contain ANY block words for this category
       return !block.some(word => text.includes(word.toLowerCase()));
     });
-
-    // Combine them to pad the total count up to a healthy amount
-    filtered = [...filtered, ...fallbackArticles].slice(0, 8); 
+    filtered = [...filtered, ...backupArticles];
   }
 
-  return filtered;
+  // Fallback: If absolutely 0 passed everything, show original articles to avoid blank screen
+  return filtered.length > 0 ? filtered : articles;
 }
 
 // ─────────────────────────────────────────────
@@ -207,7 +198,7 @@ async function fetchWithRetry(url, options = {}, retries = 2, delayMs = 1000) {
 }
 
 // ─────────────────────────────────────────────
-// COMPONENT
+// MAIN COMPONENT
 // ─────────────────────────────────────────────
 function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
   const [articles, setArticles]               = useState([]);
@@ -224,29 +215,35 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
     setExpandedCard(null);
     setDeepContextCard(null);
     setAnalysisData({});
+    
+    // FIX: Clear previous error instantly on refresh so layout resets properly
     setError(null);
+    setArticles([]);
 
     const fetchNews = async () => {
       try {
         setLoading(true);
 
+        // FIX: Bypasses downstream proxy/browser cache completely using Headers and unique timestamp keys
         const response = await fetchWithRetry(
-          `${API_BASE}/api/news?region=${selectedRegion}&category=${selectedCategory}&_t=${Date.now()}`,
-          {},
+          `${API_BASE}/api/news?region=${selectedRegion}&category=${selectedCategory}&nocache=${Date.now()}`,
+          {
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0'
+            }
+          },
           2,
-          1200
+          1000
         );
 
         const data     = await response.json();
         const fetched  = data.news || data.articles || [];
-        
-        // Run our smart padding filter
         const filtered = filterArticles(fetched, selectedCategory);
 
-        // Even if strict matching fails, our second pass keeps it populated
         if (filtered.length === 0) {
-          setArticles([]);
-          setError("No updates found in this region right now. Hit Refresh to poll fresh updates.");
+          setError("No articles found right now. Hit refresh again shortly.");
           return;
         }
 
@@ -254,8 +251,7 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
 
       } catch (err) {
         console.error("Fetch error:", err);
-        setError("Could not load news. Check your connection or try again.");
-        setArticles([]);
+        setError("Could not load fresh intelligence. Please tap refresh to sync.");
       } finally {
         setLoading(false);
       }
@@ -329,7 +325,7 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
 
       {loading && (
         <div className="max-w-6xl mx-auto flex flex-col gap-5">
-          {[1, 2, 3].map((n) => (
+          {[1, 2, 3, 4, 5].map((n) => (
             <div key={n} className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-xl animate-pulse">
               <div className="flex justify-between items-center mb-4">
                 <div className="h-5 w-24 bg-purple-500/20 rounded-full"></div>
@@ -350,7 +346,7 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
             <div className="w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center mx-auto mb-4 border border-purple-500/20">
               <span className="text-purple-300 text-xl font-bold">!</span>
             </div>
-            <p className="text-purple-200 text-lg font-semibold mb-2">Feed Status</p>
+            <p className="text-purple-200 text-lg font-semibold mb-2">Syncing Feed Pipeline</p>
             <p className="text-gray-400 text-sm max-w-md mx-auto leading-relaxed">{error}</p>
           </div>
         </div>
