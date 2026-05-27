@@ -7,17 +7,22 @@ from datetime import datetime, timedelta
 
 # ─────────────────────────────────────────────
 # BACKEND CATEGORY KEYWORD MATCH MASKS
-# Used to arrest content bleed from mixed feeds
+# Enhanced to ensure strict thematic checking
 # ─────────────────────────────────────────────
 VALIDATION_KEYWORDS = {
-    "Technology": ["tech", "software", "hardware", "app", "phone", "chip", "ai", "cyber", "gadget", "device", "launch", "crypto", "digital", "system"],
-    "Business": ["market", "stock", "share", "economy", "gdp", "revenue", "profit", "investment", "bank", "finance", "financial", "tax", "rupee", "dollar", "company", "ceo"],
-    "Sports": ["cricket", "football", "soccer", "tennis", "match", "tournament", "championship", "league", "cup", "player", "team", "score", "win", "victory"],
-    "Entertainment": ["movie", "film", "cinema", "bollywood", "hollywood", "films", "series", "show", "tv", "ott", "song", "music", "album", "artist", "singer", "actor", "actress", "celebrity", "star", "premiere"],
-    "Politics": ["government", "parliament", "minister", "prime minister", "president", "election", "vote", "party", "congress", "bjp", "policy", "law", "court", "political", "modi", "leaders"]
+    "Technology": ["tech", "software", "hardware", "app", "phone", "chip", "ai", "cyber", "gadget", "device", "launch", "crypto", "digital", "system", "platform", "server"],
+    "Business": ["market", "stock", "share", "economy", "gdp", "revenue", "profit", "investment", "bank", "finance", "financial", "tax", "rupee", "dollar", "company", "ceo", "nifty", "sensex", "cap", "gainers", "losers", "industry", "biz"],
+    "Sports": ["cricket", "football", "soccer", "tennis", "match", "tournament", "championship", "league", "cup", "player", "team", "score", "win", "victory", "stadium", "ipl"],
+    "Entertainment": ["movie", "film", "cinema", "bollywood", "hollywood", "series", "show", "tv", "ott", "song", "music", "album", "artist", "singer", "actor", "actress", "celebrity", "star", "premiere", "theatre"],
+    "Politics": ["government", "parliament", "minister", "election", "vote", "party", "congress", "bjp", "policy", "law", "court", "political", "modi", "leaders", "cm", "pm", "delhi", "assembly"]
 }
 
-GLOBAL_CRIME_BLOCKS = ["murder", "rape", "assault", "arrest", "criminal", "custody", "accident", "highway", "deadly"]
+# Expanded to catch general non-business events like health scares or flight incidents
+GLOBAL_GENERAL_BLOCKS = [
+    "murder", "rape", "assault", "arrest", "criminal", "custody", "bail", "accident", "highway", 
+    "deadly", "ebola", "virus", "scare", "isolated", "testing", "hospital", "patients", "flight snag",
+    "snag", "airspace", "landed safely", "turned back", "stray dog", "weather alert"
+]
 
 # ─────────────────────────────────────────────
 # RSS FEEDS
@@ -50,7 +55,6 @@ RSS_FEEDS = {
         ],
         "Politics": [
             "https://indianexpress.com/section/political-pulse/feed/",
-            "https://www.thehindu.com/news/national/feeder/default.rss"
         ],
     },
     "World": {
@@ -130,8 +134,8 @@ def fetch_news(region: str = "India", category: str = "All", limit: int = 35):
             if feed is None or not feed.entries:
                 continue
 
-            # BACKUP FIX: Grab a larger raw pool and randomize immediately
-            raw_entries = feed.entries[:25]
+            # Take up to 30 elements to ensure plenty of shuffle variance
+            raw_entries = feed.entries[:30]
             random.shuffle(raw_entries)
 
             for entry in raw_entries:
@@ -160,14 +164,15 @@ def fetch_news(region: str = "India", category: str = "All", limit: int = 35):
                     summary = BeautifulSoup(raw_summary, "html.parser").get_text().strip()
                     search_text = (title + " " + summary).lower()
 
-                    # ── BACKEND QUALITY CHECK ──
-                    if any(block_word in search_text for block_word in GLOBAL_CRIME_BLOCKS):
+                    # 1. Global Block Filter Check
+                    if any(block_word in search_text for block_word in GLOBAL_GENERAL_BLOCKS):
                         continue
 
+                    # 2. Hard Category Relevance Check (STRICTLY REQUIRED FOR SUB-CATEGORIES)
                     if category != "All" and category in VALIDATION_KEYWORDS:
                         has_marker = any(keyword in search_text for keyword in VALIDATION_KEYWORDS[category])
                         if not has_marker:
-                            continue  
+                            continue  # Drop instantly if it doesn't match the category theme
 
                     seen_titles.add(title_key)
 
@@ -184,7 +189,6 @@ def fetch_news(region: str = "India", category: str = "All", limit: int = 35):
                         else "Unknown"
                     )
 
-                    # FIX: Safely assign the link dictionary key without inline syntax issues
                     article_link = entry.get("link", "")
 
                     articles.append({
@@ -203,7 +207,7 @@ def fetch_news(region: str = "India", category: str = "All", limit: int = 35):
         except Exception:
             continue
 
-    # BACKUP FIX: Randomize slightly across the latest pool before sending to frontend
+    # Final randomized shuffle to keep the refresh button completely active
     random.shuffle(articles)
     return articles[:limit]
 
