@@ -89,6 +89,33 @@ RSS_FEEDS = {
     }
 }
 
+CATEGORY_KEYWORDS = {
+    "Technology": [
+        "ai", "technology", "tech", "software", "google",
+        "microsoft", "apple", "startup", "cyber", "robot"
+    ],
+
+    "Business": [
+        "market", "stock", "business", "economy",
+        "finance", "trade", "invest", "crypto"
+    ],
+
+    "Sports": [
+        "cricket", "football", "match", "sports",
+        "ipl", "fifa", "tennis", "olympics"
+    ],
+
+    "Entertainment": [
+        "movie", "film", "actor", "music",
+        "celebrity", "hollywood", "bollywood"
+    ],
+
+    "Politics": [
+        "government", "minister", "election",
+        "parliament", "policy", "politics"
+    ]
+}
+
 # ─────────────────────────────────────────────
 # FETCH NEWS
 # ─────────────────────────────────────────────
@@ -119,9 +146,21 @@ def fetch_news(region="India", category="All"):
                     if published and published < time_threshold:
                         continue
 
+                    clean_title = title.lower()
+
                     title = entry.get("title", "No Title")
                     link = entry.get("link", "")
                     summary = entry.get("summary", "")
+                    # Strict Category Filtering
+                    if category != "All":
+
+                        keywords = CATEGORY_KEYWORDS.get(category, [])
+
+                        combined_text = f"{title} {summary}".lower()
+
+                    if not any(keyword in combined_text for keyword in keywords):
+                        continue
+                    
 
                     # Clean raw HTML syntax from RSS summary payload
                     summary = BeautifulSoup(summary, "html.parser").get_text()
