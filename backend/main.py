@@ -13,13 +13,16 @@ from services.news_service import fetch_news
 
 from services.explanation_service import (
     generate_explanation,
-    generate_deep_context
+    generate_deep_context,
 )
 
 app = FastAPI()
 
 
+# ─────────────────────────────────────────────
 # CORS
+# ─────────────────────────────────────────────
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -29,151 +32,120 @@ app.add_middleware(
 )
 
 
-# Request Model
+# ─────────────────────────────────────────────
+# REQUEST MODELS
+# ─────────────────────────────────────────────
+
 class AnalyzeRequest(BaseModel):
     url: str
 
 
-# Home Route
+# ─────────────────────────────────────────────
+# HOME ROUTE
+# ─────────────────────────────────────────────
+
 @app.get("/")
 def home():
-
     return {
         "status": "success",
-        "message": "AI News Intelligence Backend Running"
+        "message": "AI News Intelligence Backend Running",
     }
 
 
-# News Route
+# ─────────────────────────────────────────────
+# NEWS ROUTE
+# ─────────────────────────────────────────────
+
 @app.get("/api/news")
-def get_news(
-    region: str = "World",
-    category: str = "All"
-):
-
+def get_news(region: str = "India", category: str = "All"):
     try:
-
         articles = fetch_news(region, category)
 
-        # Ensure minimum articles
-        if len(articles) < 5:
+        # FIX: Smarter fallback — only trigger when category is NOT
+        # "All" (fetching "All" as fallback for "All" is pointless).
+        # Also avoid re-adding duplicates more carefully using a set.
+        if len(articles) < 5 and category != "All":
 
             fallback_articles = fetch_news(region, "All")
 
             existing_titles = {
-                article.get("title", "")
-                for article in articles
+                a.get("title", "").lower()
+                for a in articles
             }
 
             for article in fallback_articles:
+                title_key = article.get("title", "").lower()
 
-                title = article.get("title", "")
-
-                if title not in existing_titles:
-
+                if title_key and title_key not in existing_titles:
                     articles.append(article)
+                    existing_titles.add(title_key)
 
-                if len(articles) >= 8:
+                if len(articles) >= 10:
                     break
 
+        # FIX: Return up to 10 (was 8) so there's always enough to
+        # display even if 1–2 cards get filtered on the frontend.
         return {
             "status": "success",
-            "news": articles[:8]
+            "count": len(articles[:10]),
+            "news": articles[:10],
         }
 
     except Exception as e:
-
+        print(f"[NEWS ROUTE ERROR] {e}")
         return {
             "status": "error",
             "message": str(e),
-            "news": []
+            "news": [],
         }
 
 
-# Analyze Route
+# ─────────────────────────────────────────────
+# ANALYZE ROUTE
+# ─────────────────────────────────────────────
+
 @app.post("/api/analyze")
 def analyze_article(request: AnalyzeRequest):
-
     try:
-
         url = request.url
-
         article = Article(url)
 
-        # Try extracting article
+        title = "News Article"
+        content = ""
+
         try:
-
             article.download()
-
             article.parse()
-
             title = article.title or "News Article"
-
-            content = article.text
-
+            content = article.text or ""
         except Exception as scrape_error:
-
-            print("SCRAPING ERROR:", str(scrape_error))
-
-            # Fallback for blocked articles
-            title = "News Article"
-
-            content = f"""
-            Analyze this news article intelligently.
-
-            Article URL:
-            {url}
-
-            Generate:
-            1. Concise AI Summary
-            2. Deep Context Analysis
-            """
+            print(f"[SCRAPING ERROR] {scrape_error}")
+            # Graceful fallback — AI will work from URL context
+            content = f"Article URL: {url}"
 
         # Safety fallback
-        if not content or not content.strip():
+        if not content.strip():
+            content = title if title != "News Article" else f"Article URL: {url}"
 
-            content = title
-
-        # Generate AI Summary
-        explanation = generate_explanation(
-            title,
-            content
-        )
-
-        # Generate Deep Context
-        deep_context = generate_deep_context(
-            title,
-            content
-        )
+        # Generate AI Summary + Deep Context
+        explanation = generate_explanation(title, content)
+        deep_context = generate_deep_context(title, content)
 
         return {
-
             "status": "success",
-
             "analysis": {
-
                 "explanation": explanation,
-
-                "deep_context": deep_context
-            }
+                "deep_context": deep_context,
+            },
         }
 
     except Exception as e:
-
-        print("ANALYZE ERROR:", str(e))
-
+        print(f"[ANALYZE ERROR] {e}")
         return {
-
             "status": "error",
-
             "message": str(e),
-
             "analysis": {
-
-                "explanation":
-                    "Unable to generate AI summary right now.",
-
-                "deep_context":
-                    "Unable to generate deep context right now."
-            }
+                "explanation": "Unable to generate AI summary right now.",
+                "deep_context": "Unable to generate deep context right now.",
+            },
         }
