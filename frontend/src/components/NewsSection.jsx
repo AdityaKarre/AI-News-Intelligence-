@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 const API_BASE = "https://ai-news-backend-ty0t.onrender.com";
 
 // ─────────────────────────────────────────────
-// CATEGORY FILTER MAP
+// OPTIMIZED CATEGORY FILTER MAP
 // ─────────────────────────────────────────────
 const CATEGORY_FILTERS = {
   Technology: {
@@ -96,7 +96,8 @@ const CATEGORY_FILTERS = {
       "million", "quarter", "annual", "results", "growth", "recession",
       "employment", "job", "layoff", "hire", "ceo", "cfo",
       "business", "commerce", "retail", "ecommerce", "supply chain",
-      "crude", "oil", "gold", "commodity", "forex",
+      "crude", "oil", "gold", "commodity", "forex", "chemical", "industry",
+      "stores", "sales", "brands", "growth", "retailer", "earnings"
     ],
   },
   Entertainment: {
@@ -110,14 +111,15 @@ const CATEGORY_FILTERS = {
       "wicket", "innings", "goal", "penalty", "ipl score",
     ],
     allow: [
-      "movie", "film", "cinema", "bollywood", "hollywood",
+      "movie", "film", "cinema", "bollywood", "hollywood", "films",
       "series", "show", "tv", "ott", "netflix", "amazon prime",
       "disney", "hotstar", "song", "music", "album", "artist",
       "singer", "actor", "actress", "celebrity", "star",
       "award", "oscar", "grammy", "bafta", "filmfare",
       "release", "trailer", "review", "box office", "collection",
       "streaming", "web series", "entertainment", "concert", "tour",
-      "fashion", "red carpet", "interview", "debut",
+      "fashion", "red carpet", "interview", "debut", "premiere",
+      "television", "channel", "theatre", "screen", "songs", "teaser",
       "shah rukh", "salman", "deepika", "ranveer", "alia",
       "taylor swift", "beyoncé", "rihanna", "drake",
     ],
@@ -157,27 +159,35 @@ function filterArticles(articles, category) {
 
   const { block, allow } = CATEGORY_FILTERS[category];
 
-  const filtered = articles.filter((article) => {
-    const text = (
-      (article.title || "") + " " + (article.description || "")
-    ).toLowerCase();
-
-    // Step 1: Block check
+  // 1. First Pass: Strict Filter (Only pristine matches)
+  let filtered = articles.filter((article) => {
+    const text = ((article.title || "") + " " + (article.description || "")).toLowerCase();
+    
     for (const word of block) {
       if (text.includes(word.toLowerCase())) return false;
     }
-
-    // Step 2: Allow check
     for (const word of allow) {
       if (text.includes(word.toLowerCase())) return true;
     }
-
     return false;
   });
 
-  // Safe Threshold Adjustment: If we find clean data, return it.
-  // Only fall back to original array if absolutely 0 matches survived.
-  return filtered.length > 0 ? filtered : articles;
+  // 2. Second Pass: If we have fewer than 5 articles, grab safe fallback articles
+  if (filtered.length < 5) {
+    const fallbackArticles = articles.filter((article) => {
+      // Make sure it isn't already in our strict list
+      if (filtered.some(f => (f.link || f.title) === (article.link || article.title))) return false;
+      
+      const text = ((article.title || "") + " " + (article.description || "")).toLowerCase();
+      // Ensure it doesn't contain ANY block words for this category
+      return !block.some(word => text.includes(word.toLowerCase()));
+    });
+
+    // Combine them to pad the total count up to a healthy amount
+    filtered = [...filtered, ...fallbackArticles].slice(0, 8); 
+  }
+
+  return filtered;
 }
 
 // ─────────────────────────────────────────────
@@ -221,7 +231,7 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
         setLoading(true);
 
         const response = await fetchWithRetry(
-          `${API_BASE}/api/news?region=${selectedRegion}&category=${selectedCategory}`,
+          `${API_BASE}/api/news?region=${selectedRegion}&category=${selectedCategory}&_t=${Date.now()}`,
           {},
           2,
           1200
@@ -229,18 +239,14 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
 
         const data     = await response.json();
         const fetched  = data.news || data.articles || [];
+        
+        // Run our smart padding filter
         const filtered = filterArticles(fetched, selectedCategory);
 
-        // Enhanced Check: Ensure we actually got high-quality filtered matches
-        const originalFilteredLength = fetched.filter(a => {
-          const t = ((a.title || "") + " " + (a.description || "")).toLowerCase();
-          const { block } = CATEGORY_FILTERS[selectedCategory] || { block: [] };
-          return !block.some(word => t.includes(word.toLowerCase()));
-        }).length;
-
-        if (filtered.length === 0 || (selectedCategory !== "All" && originalFilteredLength === 0)) {
+        // Even if strict matching fails, our second pass keeps it populated
+        if (filtered.length === 0) {
           setArticles([]);
-          setError("No pure curated articles found for this category right now. Hit Refresh to poll fresh updates.");
+          setError("No updates found in this region right now. Hit Refresh to poll fresh updates.");
           return;
         }
 
@@ -321,7 +327,6 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
   return (
     <section className="relative z-10 px-4 sm:px-6 lg:px-10 pb-20">
 
-      {/* Premium Skeleton Loader */}
       {loading && (
         <div className="max-w-6xl mx-auto flex flex-col gap-5">
           {[1, 2, 3].map((n) => (
@@ -345,7 +350,7 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
             <div className="w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center mx-auto mb-4 border border-purple-500/20">
               <span className="text-purple-300 text-xl font-bold">!</span>
             </div>
-            <p className="text-purple-200 text-lg font-semibold mb-2">Feed Under Optimization</p>
+            <p className="text-purple-200 text-lg font-semibold mb-2">Feed Status</p>
             <p className="text-gray-400 text-sm max-w-md mx-auto leading-relaxed">{error}</p>
           </div>
         </div>
