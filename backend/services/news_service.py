@@ -19,41 +19,65 @@ RSS_FEEDS = {
         "All": [
 
             "https://timesofindia.indiatimes.com/rssfeedstopstories.cms",
+
             "https://feeds.feedburner.com/ndtvnews-top-stories",
+
             "https://indianexpress.com/section/india/feed/",
+
             "https://www.thehindu.com/news/national/feeder/default.rss"
         ],
 
-        "Politics": [
-
-            "https://www.thehindu.com/news/national/feeder/default.rss",
-            "https://indianexpress.com/section/political-pulse/feed/"
-        ],
 
         "Technology": [
 
             "https://feeds.feedburner.com/gadgets360-latest",
+
+            "https://www.livemint.com/rss/technology",
+
             "https://tech.hindustantimes.com/rss/topnews/rssfeed.xml"
         ],
+
 
         "Business": [
 
             "https://www.moneycontrol.com/rss/business.xml",
-            "https://www.livemint.com/rss/markets"
+
+            "https://www.livemint.com/rss/markets",
+
+            "https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms"
         ],
+
 
         "Sports": [
 
             "https://www.espncricinfo.com/rss/content/story/feeds/0.xml",
-            "https://sports.ndtv.com/rss/all"
+
+            "https://sports.yahoo.com/top/rss.xml",
+
+            "https://feeds.bbci.co.uk/sport/rss.xml"
         ],
+
 
         "Entertainment": [
 
             "https://www.bollywoodhungama.com/rss/news.xml",
-            "https://www.ndtv.com/entertainment/feed"
+
+            "https://www.ndtv.com/entertainment/feed",
+
+            "https://www.billboard.com/feed/"
+        ],
+
+
+        "Politics": [
+
+            "https://indianexpress.com/section/political-pulse/feed/",
+
+            "https://feeds.bbci.co.uk/news/politics/rss.xml",
+
+            "http://rss.cnn.com/rss/cnn_allpolitics.rss"
         ]
     },
+
 
 
     "World": {
@@ -61,46 +85,63 @@ RSS_FEEDS = {
         "All": [
 
             "http://rss.cnn.com/rss/edition.rss",
+
             "http://feeds.bbci.co.uk/news/rss.xml",
-            "https://www.france24.com/en/rss",
-            "https://rss.dw.com/rdf/rss-en-all",
+
             "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml"
         ],
 
-        "Politics": [
-
-            "http://rss.cnn.com/rss/cnn_allpolitics.rss",
-            "https://feeds.bbci.co.uk/news/politics/rss.xml",
-            "https://www.france24.com/en/europe/rss"
-        ],
 
         "Technology": [
 
             "https://techcrunch.com/feed/",
+
             "https://www.theverge.com/rss/index.xml",
-            "https://www.france24.com/en/business-tech/rss"
+
+            "https://feeds.arstechnica.com/arstechnica/index"
         ],
+
 
         "Business": [
 
-            "https://rss.dw.com/rdf/rss-en-bus",
-            "https://www.cnbc.com/id/10001147/device/rss/rss.html"
+            "https://www.cnbc.com/id/10001147/device/rss/rss.html",
+
+            "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml",
+
+            "https://feeds.bbci.co.uk/news/business/rss.xml"
         ],
+
 
         "Sports": [
 
             "https://www.espn.com/espn/rss/news",
-            "https://sports.yahoo.com/top/rss.xml"
+
+            "https://sports.yahoo.com/top/rss.xml",
+
+            "https://feeds.bbci.co.uk/sport/rss.xml"
         ],
+
 
         "Entertainment": [
 
             "https://www.hollywoodreporter.com/feed/",
-            "https://www.billboard.com/feed/"
+
+            "https://www.billboard.com/feed/",
+
+            "https://variety.com/feed/"
+        ],
+
+
+        "Politics": [
+
+            "https://feeds.bbci.co.uk/news/politics/rss.xml",
+
+            "http://rss.cnn.com/rss/cnn_allpolitics.rss",
+
+            "https://rss.nytimes.com/services/xml/rss/nyt/Politics.xml"
         ]
     }
 }
-
 
 # ─────────────────────────────────────────────
 # FETCH NEWS
@@ -224,64 +265,7 @@ def fetch_news(region="India", category="All"):
 
         except Exception:
             continue
-
-
-    # ─────────────────────────────────────────
-    # ENSURE MINIMUM 5 ARTICLES
-    # ─────────────────────────────────────────
-
-    if len(articles) < 5:
-
-        fallback_feeds = RSS_FEEDS.get(region, {}).get("All", [])
-
-        for url in fallback_feeds:
-
-            try:
-
-                feed = feedparser.parse(url)
-
-                entries = feed.entries[:10]
-
-                for entry in entries:
-
-                    title = entry.get("title", "No Title")
-
-                    if any(
-                        article["title"] == title
-                        for article in articles
-                    ):
-                        continue
-
-                    summary = entry.get("summary", "")
-
-                    summary = BeautifulSoup(
-                        summary,
-                        "html.parser"
-                    ).get_text()
-
-                    articles.append({
-
-                        "title": title,
-
-                        "description": summary[:250],
-
-                        "summary": summary,
-
-                        "link": entry.get("link", ""),
-
-                        "source": "Fallback",
-
-                        "region": region,
-
-                        "category": category,
-                    })
-
-                    if len(articles) >= 5:
-                        break
-
-            except Exception:
-                continue
-
+        
     return articles
 
 
