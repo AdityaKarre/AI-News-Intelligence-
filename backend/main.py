@@ -6,11 +6,9 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-
 from newspaper import Article
 
 from services.news_service import fetch_news
-
 from services.explanation_service import (
     generate_explanation,
     generate_deep_context,
@@ -18,11 +16,9 @@ from services.explanation_service import (
 
 app = FastAPI()
 
-
 # ─────────────────────────────────────────────
 # CORS
 # ─────────────────────────────────────────────
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -31,19 +27,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # ─────────────────────────────────────────────
 # REQUEST MODELS
 # ─────────────────────────────────────────────
-
 class AnalyzeRequest(BaseModel):
     url: str
 
-
 # ─────────────────────────────────────────────
-# HOME ROUTE
+# HOME
 # ─────────────────────────────────────────────
-
 @app.get("/")
 def home():
     return {
@@ -51,44 +43,24 @@ def home():
         "message": "AI News Intelligence Backend Running",
     }
 
-
 # ─────────────────────────────────────────────
 # NEWS ROUTE
+# KEY FIX: Removed fallback to "All" entirely.
+# The "All" feeds (TOI, NDTV) are general-purpose
+# and pollute every specific category.
+# Instead we return whatever category-specific feeds
+# give us — the frontend filter handles the rest.
 # ─────────────────────────────────────────────
-
 @app.get("/api/news")
 def get_news(region: str = "India", category: str = "All"):
     try:
-        articles = fetch_news(region, category)
+        # Fetch more entries so frontend filter has enough to work with
+        articles = fetch_news(region, category, limit=20)
 
-        # FIX: Smarter fallback — only trigger when category is NOT
-        # "All" (fetching "All" as fallback for "All" is pointless).
-        # Also avoid re-adding duplicates more carefully using a set.
-        if len(articles) < 5 and category != "All":
-
-            fallback_articles = fetch_news(region, "All")
-
-            existing_titles = {
-                a.get("title", "").lower()
-                for a in articles
-            }
-
-            for article in fallback_articles:
-                title_key = article.get("title", "").lower()
-
-                if title_key and title_key not in existing_titles:
-                    articles.append(article)
-                    existing_titles.add(title_key)
-
-                if len(articles) >= 10:
-                    break
-
-        # FIX: Return up to 10 (was 8) so there's always enough to
-        # display even if 1–2 cards get filtered on the frontend.
         return {
             "status": "success",
-            "count": len(articles[:10]),
-            "news": articles[:10],
+            "count": len(articles),
+            "news": articles,
         }
 
     except Exception as e:
@@ -99,17 +71,14 @@ def get_news(region: str = "India", category: str = "All"):
             "news": [],
         }
 
-
 # ─────────────────────────────────────────────
 # ANALYZE ROUTE
 # ─────────────────────────────────────────────
-
 @app.post("/api/analyze")
 def analyze_article(request: AnalyzeRequest):
     try:
         url = request.url
         article = Article(url)
-
         title = "News Article"
         content = ""
 
@@ -120,15 +89,12 @@ def analyze_article(request: AnalyzeRequest):
             content = article.text or ""
         except Exception as scrape_error:
             print(f"[SCRAPING ERROR] {scrape_error}")
-            # Graceful fallback — AI will work from URL context
             content = f"Article URL: {url}"
 
-        # Safety fallback
         if not content.strip():
             content = title if title != "News Article" else f"Article URL: {url}"
 
-        # Generate AI Summary + Deep Context
-        explanation = generate_explanation(title, content)
+        explanation  = generate_explanation(title, content)
         deep_context = generate_deep_context(title, content)
 
         return {
