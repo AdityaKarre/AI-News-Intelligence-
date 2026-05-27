@@ -149,21 +149,6 @@ def fetch_news(region="India", category="All"):
                     link = entry.get("link", "")
                     summary = entry.get("summary", "")
                     # Softer Category Filtering
-                    if category != "All":
-
-                        keywords = CATEGORY_KEYWORDS.get(category,[])
-
-                        combined_text = (f"{title} {summary}").lower()
-
-                        score = sum(
-                            keyword in combined_text
-                                for keyword in keywords
-                        )
-
-                    # Only skip if VERY unrelated
-                        if score == 0 and len(summary) > 80:
-                            continue
-                    
 
                     # Clean raw HTML syntax from RSS summary payload
                     summary = BeautifulSoup(summary, "html.parser").get_text()
@@ -218,6 +203,60 @@ def fetch_news(region="India", category="All"):
 
     # Slice the highest quality real-time candidates and introduce dynamic feed shuffling
     latest_pool = unique_articles[:30]
+
+    # Ensure minimum article count
+    if len(latest_pool) < 5:
+
+         fallback_feeds = RSS_FEEDS.get(region, {}).get("All", [])
+
+    for url in fallback_feeds:
+
+        try:
+
+            feed = feedparser.parse(url)
+
+            entries = feed.entries[:10]
+
+            for entry in entries:
+
+                title = entry.get("title", "No Title")
+
+                # Skip duplicates
+                if any(
+                    article["title"] == title
+                    for article in latest_pool
+                ):
+                    continue
+
+                summary = entry.get("summary", "")
+
+                summary = BeautifulSoup(
+                    summary,
+                    "html.parser"
+                ).get_text()
+
+                latest_pool.append({
+
+                    "title": title,
+
+                    "description": summary[:250],
+
+                    "summary": summary,
+
+                    "link": entry.get("link", ""),
+
+                    "source": "Fallback",
+
+                    "region": region,
+
+                    "category": category,
+                })
+
+                if len(latest_pool) >= 5:
+                    break
+
+        except Exception:
+            continue
 
     return latest_pool
 
