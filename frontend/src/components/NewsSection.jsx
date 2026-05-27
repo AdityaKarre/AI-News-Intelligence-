@@ -146,7 +146,7 @@ const CATEGORY_FILTERS = {
 };
 
 // ─────────────────────────────────────────────
-// COMPREHENSIVE FILTER & MULTIPLIER FUNCTION
+// FILTER FUNCTION
 // ─────────────────────────────────────────────
 function filterArticles(articles, category) {
   if (category === "All" || !CATEGORY_FILTERS[category]) {
@@ -155,7 +155,6 @@ function filterArticles(articles, category) {
 
   const { block, allow } = CATEGORY_FILTERS[category];
 
-  // Pass 1: Strict match
   let filtered = articles.filter((article) => {
     const text = ((article.title || "") + " " + (article.description || "")).toLowerCase();
     for (const word of block) {
@@ -167,7 +166,6 @@ function filterArticles(articles, category) {
     return false;
   });
 
-  // Pass 2: High Density Pad (If under 5 articles, bring in pristine, block-free general entries)
   if (filtered.length < 5) {
     const backupArticles = articles.filter((article) => {
       if (filtered.some(f => (f.link || f.title) === (article.link || article.title))) return false;
@@ -177,8 +175,7 @@ function filterArticles(articles, category) {
     filtered = [...filtered, ...backupArticles];
   }
 
-  // Fallback: If absolutely 0 passed everything, show original articles to avoid blank screen
-  return filtered.length > 0 ? filtered : articles;
+  return filtered;
 }
 
 // ─────────────────────────────────────────────
@@ -198,7 +195,7 @@ async function fetchWithRetry(url, options = {}, retries = 2, delayMs = 1000) {
 }
 
 // ─────────────────────────────────────────────
-// MAIN COMPONENT
+// COMPONENT
 // ─────────────────────────────────────────────
 function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
   const [articles, setArticles]               = useState([]);
@@ -208,15 +205,17 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
   const [loadingCard, setLoadingCard]         = useState(null);
   const [analysisData, setAnalysisData]       = useState({});
   const [error, setError]                     = useState(null);
+  
+  // New Visual Proof State
+  const [syncTime, setSyncTime]               = useState("");
 
-  // ── Fetch & Filter News ──────────────────────
   useEffect(() => {
     window.scrollTo(0, 0);
     setExpandedCard(null);
     setDeepContextCard(null);
     setAnalysisData({});
     
-    // FIX: Clear previous error instantly on refresh so layout resets properly
+    // Reset views instantly on refresh so skeleton loaders trigger cleanly
     setError(null);
     setArticles([]);
 
@@ -224,7 +223,6 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
       try {
         setLoading(true);
 
-        // FIX: Bypasses downstream proxy/browser cache completely using Headers and unique timestamp keys
         const response = await fetchWithRetry(
           `${API_BASE}/api/news?region=${selectedRegion}&category=${selectedCategory}&nocache=${Date.now()}`,
           {
@@ -242,8 +240,12 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
         const fetched  = data.news || data.articles || [];
         const filtered = filterArticles(fetched, selectedCategory);
 
+        // Update the visual sync clock to show your refresh button is actively working
+        const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        setSyncTime(currentTime);
+
         if (filtered.length === 0) {
-          setError("No articles found right now. Hit refresh again shortly.");
+          setError("Can't find or load the news at the moment.");
           return;
         }
 
@@ -251,7 +253,7 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
 
       } catch (err) {
         console.error("Fetch error:", err);
-        setError("Could not load fresh intelligence. Please tap refresh to sync.");
+        setError("Can't find or load the news at the moment.");
       } finally {
         setLoading(false);
       }
@@ -260,7 +262,6 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
     fetchNews();
   }, [selectedRegion, selectedCategory, refreshKey]);
 
-  // ── Analyze Article ──────────────────────────
   const analyzeArticle = useCallback(async (article) => {
     const uniqueId = article.link || article.title;
     try {
@@ -297,7 +298,6 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
     }
   }, []);
 
-  // ── Expand Card ──────────────────────────────
   const handleExpand = async (article) => {
     const uniqueId = article.link || article.title;
     if (expandedCard === uniqueId) {
@@ -312,16 +312,24 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
     }
   };
 
-  // ── Back button ──────────────────────────────
   useEffect(() => {
     const onBack = () => { if (expandedCard) setExpandedCard(null); };
     window.addEventListener("popstate", onBack);
     return () => window.removeEventListener("popstate", onBack);
   }, [expandedCard]);
 
-  // ── RENDER ───────────────────────────────────
   return (
     <section className="relative z-10 px-4 sm:px-6 lg:px-10 pb-20">
+
+      {/* Visual Sync Badge Tracker */}
+      {syncTime && !loading && (
+        <div className="max-w-6xl mx-auto mb-4 text-right">
+          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-medium backdrop-blur-md">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            System Feed Synced: {syncTime}
+          </span>
+        </div>
+      )}
 
       {loading && (
         <div className="max-w-6xl mx-auto flex flex-col gap-5">
@@ -340,14 +348,16 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
         </div>
       )}
 
+      {/* Your Requested Disclaimer View */}
       {!loading && error && (
         <div className="max-w-2xl mx-auto mt-16 text-center">
-          <div className="bg-purple-950/20 border border-purple-500/30 backdrop-blur-xl rounded-2xl px-6 py-10 shadow-xl shadow-purple-950/50">
+          <div className="bg-purple-950/20 border border-purple-500/20 backdrop-blur-xl rounded-2xl px-6 py-12 shadow-xl shadow-purple-950/40">
             <div className="w-12 h-12 rounded-full bg-purple-500/10 flex items-center justify-center mx-auto mb-4 border border-purple-500/20">
-              <span className="text-purple-300 text-xl font-bold">!</span>
+              <span className="text-purple-300 text-lg font-semibold">ℹ</span>
             </div>
-            <p className="text-purple-200 text-lg font-semibold mb-2">Syncing Feed Pipeline</p>
-            <p className="text-gray-400 text-sm max-w-md mx-auto leading-relaxed">{error}</p>
+            <p className="text-gray-300 text-base font-medium leading-relaxed max-w-sm mx-auto">
+              {error}
+            </p>
           </div>
         </div>
       )}
