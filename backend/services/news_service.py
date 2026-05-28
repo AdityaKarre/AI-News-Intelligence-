@@ -1,13 +1,13 @@
 import feedparser
 import time
 import random
+import re
 from bs4 import BeautifulSoup
 from newspaper import Article
 from datetime import datetime, timedelta
 
 # ─────────────────────────────────────────────────────────────────────────────
-# VALIDATION KEYWORDS
-# High-precision industry filters to completely stop cross-category bleed
+# VALIDATION KEYWORDS (STRICT WORD BOUNDARIES)
 # ─────────────────────────────────────────────────────────────────────────────
 VALIDATION_KEYWORDS = {
     "Technology": [
@@ -53,17 +53,12 @@ VALIDATION_KEYWORDS = {
     ]
 }
 
-# Global general safety rules to trap health scares, generic city alerts, and travel incidents
 GLOBAL_GENERAL_BLOCKS = [
     "murder", "rape", "assault", "arrest", "criminal", "custody", "bail", "accident", "highway", 
     "deadly", "ebola", "virus", "scare", "isolated", "testing", "hospital", "patients", "flight snag",
     "snag", "airspace", "landed safely", "turned back", "stray dog", "weather alert", "robbery", "theft"
 ]
 
-# ─────────────────────────────────────────────────────────────────────────────
-# MASTER CLEANED RSS FEEDS (INDIA & WORLD COHORT MATRIX)
-# Sorted layout structures anchoring clean primary domains at the top
-# ─────────────────────────────────────────────────────────────────────────────
 RSS_FEEDS = {
     "India": {
         "All": [
@@ -155,9 +150,6 @@ def clean_title(title: str) -> str:
         title = title.replace(suffix, "")
     return title.strip()
 
-# ─────────────────────────────────────────────
-# FETCH NEWS ROUTE INFRASTRUCTURE (Accepts limit variable from main.py)
-# ─────────────────────────────────────────────
 def fetch_news(region="India", category="All", limit=35):
     latest_pool = []
     seen_titles = set()
@@ -169,11 +161,10 @@ def fetch_news(region="India", category="All", limit=35):
         try:
             timestamp = int(time.time())
             cache_bust_url = f"{url}&t={timestamp}" if "?" in url else f"{url}?t={timestamp}"
-
             feed = feedparser.parse(cache_bust_url)
             
-            # Backup Logic: Slice and randomize the feed directly at the parser stage
-            entries = feed.entries[:30]
+            # Pull a deeper raw pool from each feed to ensure plenty of refresh material
+            entries = feed.entries[:40]
             random.shuffle(entries)
 
             for entry in entries:
@@ -200,24 +191,21 @@ def fetch_news(region="India", category="All", limit=35):
                     summary = BeautifulSoup(summary, "html.parser").get_text().strip()
                     combined_text = f"{title} {summary}".lower()
 
-                    # 1. Global Filter Validation Drop Check
-                    if any(block_word in combined_text for block_word in GLOBAL_GENERAL_BLOCKS):
+                    # 1. Regex Safety Block Filter
+                    if any(re.search(r'\b' + re.escape(bw) + r'\b', combined_text) for bw in GLOBAL_GENERAL_BLOCKS):
                         continue
 
-                    # 2. Hard Category Verification Check (Wipes out short-summary shortcuts)
+                    # 2. Strict Regex Category Check (Bypasses keyword parts like 'start' inside 'started')
                     if category != "All":
                         keywords = VALIDATION_KEYWORDS.get(category, [])
-                        score = sum(keyword in combined_text for keyword in keywords)
+                        score = sum(1 for kw in keywords if re.search(r'\b' + re.escape(kw) + r'\b', combined_text))
                         if score == 0:
-                            continue  # Cleanly drop leaked data streams immediately
+                            continue  # Drop leak instantly
 
                     seen_titles.add(title_key)
+                    raw_source = feed.feed.title if hasattr(feed, "feed") and hasattr(feed.feed, "title") else "Unknown"
 
-                    raw_source = (
-                        feed.feed.title if hasattr(feed, "feed") and hasattr(feed.feed, "title") else "Unknown"
-                    )
-
-                    article_data = {
+                    latest_pool.append({
                         "title": title,
                         "description": summary[:250],
                         "summary": summary,
@@ -225,22 +213,16 @@ def fetch_news(region="India", category="All", limit=35):
                         "source": raw_source.strip(),
                         "region": region,
                         "category": category,
-                    }
-
-                    latest_pool.append(article_data)
-
+                    })
                 except Exception:
                     continue
         except Exception:
             continue
 
-    # Backup Logic: Randomly scramble the output selection before returning JSON
     random.shuffle(latest_pool)
-    return latest_pool[:limit]
+    # Return a high pool threshold (60 items) so frontend always has fresh layout shuffle elements
+    return latest_pool[:60]
 
-# ─────────────────────────────────────────────
-# FULL ARTICLE EXTRACTION
-# ─────────────────────────────────────────────
 def extract_full_article(url):
     try:
         article = Article(url)
@@ -253,9 +235,4 @@ def extract_full_article(url):
             "top_image": article.top_image,
         }
     except Exception:
-        return {
-            "text": "Unable to fetch article.",
-            "authors": [],
-            "publish_date": None,
-            "top_image": "",
-        }
+        return {"text": "Unable to fetch article.", "authors": [], "publish_date": None, "top_image": ""}

@@ -2,9 +2,6 @@ import { useEffect, useState, useCallback } from "react";
 
 const API_BASE = "https://ai-news-backend-ty0t.onrender.com";
 
-// ─────────────────────────────────────────────
-// Airtight Target Industry Validation Dictionaries
-// ─────────────────────────────────────────────
 const TARGET_KEYWORDS = {
   Technology: [
     "tech", "technology", "software", "hardware", "app", "apps", "smartphone", "phone", 
@@ -22,7 +19,7 @@ const TARGET_KEYWORDS = {
     "ipo", "startup", "company", "corporate", "industry", "sector", "bank", "banking", 
     "finance", "financial", "tax", "rupee", "dollar", "sensex", "nifty", "bse", "nse", "rbi", 
     "interest rate", "merger", "acquisition", "deal", "billion", "million", "quarter", 
-    "annual", "growth", "recession", "employment", "job", "layoff", "hire", "ceo", "cfo", 
+    "annual", "results", "growth", "recession", "employment", "job", "layoff", "hire", "ceo", "cfo", 
     "business", "commerce", "retail", "ecommerce", "sales", "brands", "retailer", "prices", "firm"
   ],
   Sports: [
@@ -51,66 +48,40 @@ const TARGET_KEYWORDS = {
 const GLOBAL_BLOCKS = [
   "murder", "rape", "assault", "arrest", "police", "court", "verdict", "sentence", 
   "accused", "criminal", "fir ", "custody", "bail", "temple", "mosque", "church", 
-  "bakrid", "eid", "diwali", "ramadan", "communal", "highway", "accident", "protest"
+  "communal", "highway", "accident", "protest"
 ];
 
-// ─────────────────────────────────────────────
-// HIGH-FIDELITY MATCH SCORING FUNCTION
-// ─────────────────────────────────────────────
 function filterArticles(articles, category) {
   if (!articles || articles.length === 0) return [];
   if (category === "All" || !TARGET_KEYWORDS[category]) {
-    // Return safe slice shuffled naturally for visual refreshment
     return [...articles].sort(() => 0.5 - Math.random()).slice(0, 8);
   }
 
   const validTargets = TARGET_KEYWORDS[category];
 
-  // Map each article to its corresponding relevance score
-  const scoredArticles = articles.map(article => {
+  const highQualityPool = articles.filter(article => {
     const text = ((article.title || "") + " " + (article.description || "")).toLowerCase();
     
-    // Hard check for severe general block phrases
+    // 1. Strict General Blocks check
     const containsBlock = GLOBAL_BLOCKS.some(word => text.includes(word));
-    if (containsBlock) return { article, score: -1 };
+    if (containsBlock) return false;
 
-    // Count direct textual keyword occurrences
-    let score = 0;
-    validTargets.forEach(keyword => {
-      if (text.includes(keyword)) {
-        score += 1;
+    // 2. Strict Exact Word Regex Check
+    let hasMatch = false;
+    for (let i = 0; i < validTargets.length; i++) {
+      const regex = new RegExp(`\\b${validTargets[i]}\\b`, 'i');
+      if (regex.test(text)) {
+        hasMatch = true;
+        break;
       }
-    });
-
-    return { article, score };
+    }
+    return hasMatch;
   });
 
-  // Filter out any articles with low scores
-  let highQualityPool = scoredArticles
-    .filter(item => item.score > 0) // Must match at least 1 keyword
-    .sort((a, b) => b.score - a.score) // Rank by structural thematic fit
-    .map(item => item.article);
-
-  // If the clean pool runs low, pad it safely using block-free records
-  if (highQualityPool.length < 5) {
-    const fallbackPool = scoredArticles
-      .filter(item => item.score === 0) // No category blocks, neutral score
-      .map(item => item.article);
-
-    // Shuffle fallbacks to guarantee distinct rendering configurations on refresh
-    const randomizedFallback = [...fallbackPool].sort(() => 0.5 - Math.random());
-    highQualityPool = [...highQualityPool, ...randomizedFallback];
-  } else {
-    // Shuffle the high-quality pool slightly to keep the presentation dynamic
-    highQualityPool = [...highQualityPool].sort(() => 0.5 - Math.random());
-  }
-
-  return highQualityPool.slice(0, 8);
+  // Loophole Closed: Completely removed the old padding loop that injected junk data
+  return [...highQualityPool].sort(() => 0.5 - Math.random()).slice(0, 8);
 }
 
-// ─────────────────────────────────────────────
-// FETCH INFRASTRUCTURE WITH CACHE BYPASSING
-// ─────────────────────────────────────────────
 async function fetchWithRetry(url, options = {}, retries = 2, delayMs = 1000) {
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
@@ -166,7 +137,7 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
         setSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
 
         if (filtered.length === 0) {
-          setError("Can't find or load the news at the moment.");
+          setError("Can't find or load any targeted news for this topic at the moment.");
           return;
         }
 
