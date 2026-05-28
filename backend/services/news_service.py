@@ -7,25 +7,61 @@ from datetime import datetime, timedelta
 
 # ─────────────────────────────────────────────
 # BACKEND CATEGORY KEYWORD MATCH MASKS
-# Enhanced to ensure strict thematic checking
+# Strict industry validation filters to stop category bleed
 # ─────────────────────────────────────────────
 VALIDATION_KEYWORDS = {
-    "Technology": ["tech", "software", "hardware", "app", "phone", "chip", "ai", "cyber", "gadget", "device", "launch", "crypto", "digital", "system", "platform", "server"],
-    "Business": ["market", "stock", "share", "economy", "gdp", "revenue", "profit", "investment", "bank", "finance", "financial", "tax", "rupee", "dollar", "company", "ceo", "nifty", "sensex", "cap", "gainers", "losers", "industry", "biz"],
-    "Sports": ["cricket", "football", "soccer", "tennis", "match", "tournament", "championship", "league", "cup", "player", "team", "score", "win", "victory", "stadium", "ipl"],
-    "Entertainment": ["movie", "film", "cinema", "bollywood", "hollywood", "series", "show", "tv", "ott", "song", "music", "album", "artist", "singer", "actor", "actress", "celebrity", "star", "premiere", "theatre"],
-    "Politics": ["government", "parliament", "minister", "election", "vote", "party", "congress", "bjp", "policy", "law", "court", "political", "modi", "leaders", "cm", "pm", "delhi", "assembly"]
+    "Technology": [
+        "tech", "software", "hardware", "app", "apps", "smartphone", "phone", "laptop", 
+        "computer", "chip", "semiconductor", "ai", "artificial intelligence", "machine learning", 
+        "cyber", "cybersecurity", "hack", "cloud", "5g", "internet", "wifi", "satellite", 
+        "robot", "drone", "ev", "electric vehicle", "coding", "developer", "programming", 
+        "api", "google", "apple", "microsoft", "amazon", "meta", "openai", "tesla", 
+        "nvidia", "intel", "samsung", "qualcomm", "amd", "gadget", "device", "wearable", 
+        "smartwatch", "tablet", "launch", "release", "update", "processor", "iphone", 
+        "android", "pixel", "galaxy", "oneplus", "display", "server", "system", "platform"
+    ],
+    "Business": [
+        "market", "stock", "share", "economy", "gdp", "inflation", "budget", "trade", "export", 
+        "import", "revenue", "profit", "loss", "earnings", "investment", "investor", "fund", 
+        "ipo", "startup", "company", "corporate", "industry", "sector", "bank", "banking", 
+        "finance", "financial", "tax", "rupee", "dollar", "sensex", "nifty", "bse", "nse", "rbi", 
+        "interest rate", "merger", "acquisition", "deal", "billion", "million", "quarter", 
+        "annual", "results", "growth", "recession", "employment", "job", "layoff", "hire", "ceo", 
+        "cfo", "business", "commerce", "retail", "ecommerce", "sales", "brands", "retailer", "prices", "firm"
+    ],
+    "Sports": [
+        "cricket", "football", "soccer", "tennis", "basketball", "hockey", "rugby", "golf", 
+        "athletics", "olympic", "olympics", "ipl", "bcci", "fifa", "match", "tournament", 
+        "championship", "league", "cup", "trophy", "player", "team", "coach", "squad", "innings", 
+        "wicket", "run", "goal", "score", "fixture", "series", "stadium", "transfer", "debut", 
+        "won", "lost", "win", "defeat", "victory", "clash", "game", "play"
+    ],
+    "Entertainment": [
+        "movie", "film", "cinema", "bollywood", "hollywood", "films", "series", "show", "tv", 
+        "ott", "netflix", "amazon prime", "disney", "hotstar", "song", "music", "album", "artist", 
+        "singer", "actor", "actress", "celebrity", "star", "award", "oscar", "grammy", "filmfare", 
+        "release", "trailer", "review", "box office", "collection", "streaming", "entertainment", 
+        "concert", "tour", "fashion", "interview", "debut", "premiere", "television", "theatre", "teaser"
+    ],
+    "Politics": [
+        "government", "parliament", "minister", "prime minister", "president", "election", 
+        "vote", "party", "congress", "bjp", "lok sabha", "rajya sabha", "policy", "law", "bill", 
+        "act", "constitution", "court", "supreme court", "high court", "diplomat", "foreign policy", 
+        "protest", "opposition", "political", "politician", "governance", "administration", 
+        "campaign", "rally", "coalition", "modi", "rahul", "shah", "leaders", "state", "centre",
+        "assembly", "senate", "white house", "biden", "trump", "cm", "pm"
+    ]
 }
 
-# Expanded to catch general non-business events like health scares or flight incidents
+# General block filter to trap irrelevant noise alerts
 GLOBAL_GENERAL_BLOCKS = [
     "murder", "rape", "assault", "arrest", "criminal", "custody", "bail", "accident", "highway", 
     "deadly", "ebola", "virus", "scare", "isolated", "testing", "hospital", "patients", "flight snag",
-    "snag", "airspace", "landed safely", "turned back", "stray dog", "weather alert"
+    "snag", "airspace", "landed safely", "turned back", "stray dog", "weather alert", "robbery", "theft"
 ]
 
 # ─────────────────────────────────────────────
-# RSS FEEDS
+# CENTRALIZED ACCURATE RSS FEEDS (INDIA & WORLD)
 # ─────────────────────────────────────────────
 RSS_FEEDS = {
     "India": {
@@ -33,62 +69,78 @@ RSS_FEEDS = {
             "https://timesofindia.indiatimes.com/rssfeedstopstories.cms",
             "https://feeds.feedburner.com/ndtvnews-top-stories",
             "https://indianexpress.com/section/india/feed/",
-            "https://www.thehindu.com/news/national/feeder/default.rss",
+            "https://www.hindustantimes.com/feeds/rss/india-news/rssfeed.xml"
         ],
         "Technology": [
             "https://feeds.feedburner.com/gadgets360-latest",
-            "https://www.livemint.com/rss/technology",
-            "https://tech.hindustantimes.com/rss/topnews/rssfeed.xml",
-        ],
-        "Business": [
-            "https://www.moneycontrol.com/rss/business.xml",
-            "https://www.livemint.com/rss/markets",
-            "https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms",
-        ],
-        "Sports": [
-            "https://www.espncricinfo.com/rss/content/story/feeds/0.xml",
-            "https://sports.ndtv.com/rss/all"
-        ],
-        "Entertainment": [
-            "https://www.bollywoodhungama.com/rss/news.xml",
-            "https://www.ndtv.com/entertainment/feed"
+            "https://indianexpress.com/section/technology/feed/",
+            "https://tech.hindustantimes.com/rss/tech",
+            "https://cio.economictimes.indiatimes.com/rss"
         ],
         "Politics": [
             "https://indianexpress.com/section/political-pulse/feed/",
+            "https://theprint.in/feed/",
+            "https://feeds.feedburner.com/ndtvindia",
+            "https://timesofindia.indiatimes.com/rssfeeds/1081479996.cms"
         ],
+        "Business": [
+            "https://feeds.feedburner.com/ndtvbusiness",
+            "https://indianexpress.com/section/business/feed/",
+            "https://www.business-standard.com/rss/home_page_top_stories.rss",
+            "https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms"
+        ],
+        "Entertainment": [
+            "https://feeds.feedburner.com/ndtvmovies",
+            "https://indianexpress.com/section/entertainment/feed/",
+            "https://www.filmibeat.com/rss/feeds/filmibeat-fb.xml",
+            "https://timesofindia.indiatimes.com/rssfeeds/1221656.cms"
+        ],
+        "Sports": [
+            "https://sports.ndtv.com/rss/all",
+            "https://feeds.feedburner.com/ndtvcricinfo",
+            "https://www.espncricinfo.com/rss/content/story/feeds/0.xml",
+            "https://indianexpress.com/section/sports/feed/",
+            "https://timesofindia.indiatimes.com/rssfeeds/1221666.cms"
+        ]
     },
     "World": {
         "All": [
-            "http://rss.cnn.com/rss/edition.rss",
-            "http://feeds.bbci.co.uk/news/rss.xml",
-            "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml",
+            "https://www.aljazeera.com/xml/rss/all.xml",
+            "https://news.un.org/en/rss/feeds/top-stories",
+            "https://globalvoices.org/feed/",
+            "https://apnews.com/hub/world-news/rss",
+            "https://www.channelnewsasia.com/rss"
         ],
         "Technology": [
             "https://techcrunch.com/feed/",
             "https://www.theverge.com/rss/index.xml",
-            "https://feeds.arstechnica.com/arstechnica/index",
+            "https://www.aljazeera.com/xml/rss/technology.xml",
+            "https://news.un.org/en/rss/feeds/technology",
+            "https://globalvoices.org/topic/technology/feed/"
+        ],
+        "Politics": [
+            "https://www.aljazeera.com/xml/rss/politics.xml",
+            "https://news.un.org/en/rss/feeds/peace-security",
+            "https://globalvoices.org/topic/politics/feed/",
+            "https://apnews.com/hub/politics/rss"
         ],
         "Business": [
             "https://www.cnbc.com/id/10001147/device/rss/rss.html",
             "https://rss.nytimes.com/services/xml/rss/nyt/Business.xml",
-            "https://feeds.bbci.co.uk/news/business/rss.xml",
-        ],
-        "Sports": [
-            "https://www.espn.com/espn/rss/news",
-            "https://sports.yahoo.com/top/rss.xml",
-            "https://feeds.bbci.co.uk/sport/rss.xml",
+            "https://feeds.bbci.co.uk/news/business/rss.xml"
         ],
         "Entertainment": [
-            "https://www.hollywoodreporter.com/feed/",
-            "https://www.billboard.com/feed/",
-            "https://variety.com/feed/",
+            "https://globalvoices.org/topic/culture/feed/",
+            "https://news.un.org/en/rss/feeds/culture-education",
+            "https://apnews.com/hub/entertainment/rss"
         ],
-        "Politics": [
-            "https://feeds.bbci.co.uk/news/politics/rss.xml",
-            "http://rss.cnn.com/rss/cnn_allpolitics.rss",
-            "https://rss.nytimes.com/services/xml/rss/nyt/Politics.xml",
-        ],
-    },
+        "Sports": [
+            "https://www.aljazeera.com/xml/rss/sports.xml",
+            "https://apnews.com/hub/sports/rss",
+            "https://feeds.bbci.co.uk/sport/rss.xml",
+            "https://www.espncricinfo.com/rss/content/story/feeds/0.xml"
+        ]
+    }
 }
 
 TITLE_SUFFIXES = [
@@ -117,7 +169,7 @@ def _parse_feed_safe(url: str, timeout: int = 8):
         return None
 
 # ─────────────────────────────────────────────
-# FETCH NEWS
+# CORE SELECTION & EXTRACTION PIPELINE
 # ─────────────────────────────────────────────
 TIME_THRESHOLD_HOURS = 72
 
@@ -134,7 +186,7 @@ def fetch_news(region: str = "India", category: str = "All", limit: int = 35):
             if feed is None or not feed.entries:
                 continue
 
-            # Take up to 30 elements to ensure plenty of shuffle variance
+            # Backup Strategy Pass 1: Grab full raw list and shuffle immediately
             raw_entries = feed.entries[:30]
             random.shuffle(raw_entries)
 
@@ -164,15 +216,15 @@ def fetch_news(region: str = "India", category: str = "All", limit: int = 35):
                     summary = BeautifulSoup(raw_summary, "html.parser").get_text().strip()
                     search_text = (title + " " + summary).lower()
 
-                    # 1. Global Block Filter Check
+                    # 1. Global Filter Check
                     if any(block_word in search_text for block_word in GLOBAL_GENERAL_BLOCKS):
                         continue
 
-                    # 2. Hard Category Relevance Check (STRICTLY REQUIRED FOR SUB-CATEGORIES)
+                    # 2. Server-Side Mandatory Category Validation Check
                     if category != "All" and category in VALIDATION_KEYWORDS:
                         has_marker = any(keyword in search_text for keyword in VALIDATION_KEYWORDS[category])
                         if not has_marker:
-                            continue  # Drop instantly if it doesn't match the category theme
+                            continue  # Filter out non-thematic news silently
 
                     seen_titles.add(title_key)
 
@@ -207,7 +259,7 @@ def fetch_news(region: str = "India", category: str = "All", limit: int = 35):
         except Exception:
             continue
 
-    # Final randomized shuffle to keep the refresh button completely active
+    # Backup Strategy Pass 2: Final random layout shake to wake up refresh button
     random.shuffle(articles)
     return articles[:limit]
 
