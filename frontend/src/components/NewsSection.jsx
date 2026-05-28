@@ -143,64 +143,42 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
     setArticles([]);
 
     const fetchNews = async () => {
+      try {
+        setLoading(true);
 
-  try {
+        const response = await fetchWithRetry(
+          `${API_BASE}/api/news?region=${selectedRegion}&category=${selectedCategory}&nocache=${Date.now()}`,
+          {
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache',
+              'Expires': '0'
+            }
+          },
+          2,
+          1000
+        );
 
-    setLoading(true);
+        const data     = await response.json();
+        const fetched  = data.news || data.articles || [];
+        const filtered = filterArticles(fetched, selectedCategory);
 
-    const response = await fetch(
+        setSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
 
-      `https://ai-news-backend-ty0t.onrender.com/api/news?region=${selectedRegion}&category=${selectedCategory}&t=${Date.now()}`
-    );
+        if (filtered.length === 0) {
+          setError("Can't find or load the news at the moment.");
+          return;
+        }
 
-    const data = await response.json();
+        setArticles(filtered);
 
-    let articles = data.news || [];
-
-    // Slight shuffle for freshness feeling
-    if (articles.length > 5) {
-
-      const firstThree = articles.slice(0, 3);
-
-      const remaining = articles.slice(3);
-
-      remaining.sort(() => Math.random() - 0.5);
-
-      articles = [...firstThree, ...remaining];
-    }
-
-    // Better article count
-    if (selectedCategory === "All") {
-
-      articles = articles.slice(0, 12);
-
-    } else {
-
-      articles = articles.slice(0, 10);
-    }
-
-    setNews(articles);
-
-    setLastUpdated(
-      new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    );
-
-  } catch (error) {
-
-    console.error("Error fetching news:", error);
-
-  } finally {
-
-    setTimeout(() => {
-
-      setLoading(false);
-
-    }, 1200);
-  }
-};
+      } catch (err) {
+        console.error("Fetch error:", err);
+        setError("Can't find or load the news at the moment.");
+      } finally {
+        setLoading(false);
+      }
+    };
 
     fetchNews();
   }, [selectedRegion, selectedCategory, refreshKey]);
