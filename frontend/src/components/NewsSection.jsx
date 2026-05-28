@@ -5,108 +5,6 @@ const API_BASE = "https://ai-news-backend-ty0t.onrender.com";
 // ─────────────────────────────────────────────
 // Airtight Target Industry Validation Dictionaries
 // ─────────────────────────────────────────────
-const TARGET_KEYWORDS = {
-  Technology: [
-    "tech", "technology", "software", "hardware", "app", "apps", "smartphone", "phone", 
-    "laptop", "computer", "chip", "semiconductor", "ai", "artificial intelligence", 
-    "machine learning", "cyber", "cybersecurity", "hack", "cloud", "5g", "internet", 
-    "wifi", "satellite", "robot", "drone", "ev", "electric vehicle", "coding", "developer", 
-    "programming", "api", "google", "apple", "microsoft", "amazon", "meta", "openai", 
-    "tesla", "nvidia", "intel", "samsung", "qualcomm", "amd", "gadget", "device", 
-    "wearable", "smartwatch", "tablet", "launch", "release", "update", "processor", 
-    "iphone", "android", "pixel", "galaxy", "oneplus", "display", "server", "system"
-  ],
-  Business: [
-    "market", "stock", "share", "economy", "gdp", "inflation", "budget", "trade", "export", 
-    "import", "revenue", "profit", "loss", "earnings", "investment", "investor", "fund", 
-    "ipo", "startup", "company", "corporate", "industry", "sector", "bank", "banking", 
-    "finance", "financial", "tax", "rupee", "dollar", "sensex", "nifty", "bse", "nse", "rbi", 
-    "interest rate", "merger", "acquisition", "deal", "billion", "million", "quarter", 
-    "annual", "growth", "recession", "employment", "job", "layoff", "hire", "ceo", "cfo", 
-    "business", "commerce", "retail", "ecommerce", "sales", "brands", "retailer", "prices", "firm"
-  ],
-  Sports: [
-    "cricket", "football", "soccer", "tennis", "basketball", "hockey", "rugby", "golf", 
-    "athletics", "olympic", "olympics", "ipl", "bcci", "fifa", "match", "tournament", 
-    "championship", "league", "cup", "trophy", "player", "team", "coach", "squad", "innings", 
-    "wicket", "run", "goal", "score", "fixture", "series", "stadium", "transfer", "debut", 
-    "won", "lost", "win", "defeat", "victory", "clash"
-  ],
-  Entertainment: [
-    "movie", "film", "cinema", "bollywood", "hollywood", "films", "series", "show", "tv", 
-    "ott", "netflix", "amazon prime", "disney", "hotstar", "song", "music", "album", "artist", 
-    "singer", "actor", "actress", "celebrity", "star", "award", "oscar", "grammy", "filmfare", 
-    "release", "trailer", "review", "box office", "collection", "streaming", "entertainment", 
-    "concert", "tour", "fashion", "interview", "debut", "premiere", "television", "theatre", "teaser"
-  ],
-  Politics: [
-    "government", "parliament", "minister", "prime minister", "president", "election", 
-    "vote", "party", "congress", "bjp", "lok sabha", "rajya sabha", "policy", "law", "bill", 
-    "act", "constitution", "court", "supreme court", "high court", "diplomat", "foreign policy", 
-    "protest", "opposition", "political", "politician", "governance", "administration", 
-    "campaign", "rally", "coalition", "modi", "rahul", "shah", "leaders", "state", "centre"
-  ]
-};
-
-const GLOBAL_BLOCKS = [
-  "murder", "rape", "assault", "arrest", "police", "court", "verdict", "sentence", 
-  "accused", "criminal", "fir ", "custody", "bail", "temple", "mosque", "church", 
-  "bakrid", "eid", "diwali", "ramadan", "communal", "highway", "accident", "protest"
-];
-
-// ─────────────────────────────────────────────
-// HIGH-FIDELITY MATCH SCORING FUNCTION
-// ─────────────────────────────────────────────
-function filterArticles(articles, category) {
-  if (!articles || articles.length === 0) return [];
-  if (category === "All" || !TARGET_KEYWORDS[category]) {
-    // Return safe slice shuffled naturally for visual refreshment
-    return [...articles].sort(() => 0.5 - Math.random()).slice(0, 8);
-  }
-
-  const validTargets = TARGET_KEYWORDS[category];
-
-  // Map each article to its corresponding relevance score
-  const scoredArticles = articles.map(article => {
-    const text = ((article.title || "") + " " + (article.description || "")).toLowerCase();
-    
-    // Hard check for severe general block phrases
-    const containsBlock = GLOBAL_BLOCKS.some(word => text.includes(word));
-    if (containsBlock) return { article, score: -1 };
-
-    // Count direct textual keyword occurrences
-    let score = 0;
-    validTargets.forEach(keyword => {
-      if (text.includes(keyword)) {
-        score += 1;
-      }
-    });
-
-    return { article, score };
-  });
-
-  // Filter out any articles with low scores
-  let highQualityPool = scoredArticles
-    .filter(item => item.score > 0) // Must match at least 1 keyword
-    .sort((a, b) => b.score - a.score) // Rank by structural thematic fit
-    .map(item => item.article);
-
-  // If the clean pool runs low, pad it safely using block-free records
-  if (highQualityPool.length < 5) {
-    const fallbackPool = scoredArticles
-      .filter(item => item.score === 0) // No category blocks, neutral score
-      .map(item => item.article);
-
-    // Shuffle fallbacks to guarantee distinct rendering configurations on refresh
-    const randomizedFallback = [...fallbackPool].sort(() => 0.5 - Math.random());
-    highQualityPool = [...highQualityPool, ...randomizedFallback];
-  } else {
-    // Shuffle the high-quality pool slightly to keep the presentation dynamic
-    highQualityPool = [...highQualityPool].sort(() => 0.5 - Math.random());
-  }
-
-  return highQualityPool.slice(0, 8);
-}
 
 // ─────────────────────────────────────────────
 // FETCH INFRASTRUCTURE WITH CACHE BYPASSING
@@ -133,6 +31,7 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
   const [analysisData, setAnalysisData]       = useState({});
   const [error, setError]                     = useState(null);
   const [syncTime, setSyncTime]               = useState("");
+  const [lastUpdated, setLastUpdated] = useState("");
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -143,42 +42,70 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
     setArticles([]);
 
     const fetchNews = async () => {
-      try {
-        setLoading(true);
 
-        const response = await fetchWithRetry(
-          `${API_BASE}/api/news?region=${selectedRegion}&category=${selectedCategory}&nocache=${Date.now()}`,
-          {
-            headers: {
-              'Cache-Control': 'no-cache, no-store, must-revalidate',
-              'Pragma': 'no-cache',
-              'Expires': '0'
-            }
-          },
-          2,
-          1000
-        );
+  try {
 
-        const data     = await response.json();
-        const fetched  = data.news || data.articles || [];
-        const filtered = filterArticles(fetched, selectedCategory);
+    setLoading(true);
 
-        setSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    const response = await fetch(
 
-        if (filtered.length === 0) {
-          setError("Can't find or load the news at the moment.");
-          return;
-        }
+      `${API_BASE}/api/news?region=${selectedRegion}&category=${selectedCategory}&t=${Date.now()}`
+    );
 
-        setArticles(filtered);
+    const data = await response.json();
 
-      } catch (err) {
-        console.error("Fetch error:", err);
-        setError("Can't find or load the news at the moment.");
-      } finally {
-        setLoading(false);
-      }
-    };
+    let fetchedArticles = data.news || [];
+
+    // Light shuffle for refresh realism
+    if (fetchedArticles.length > 5) {
+
+      const topArticles = fetchedArticles.slice(0, 3);
+
+      const remaining = fetchedArticles.slice(3);
+
+      remaining.sort(() => Math.random() - 0.5);
+
+      fetchedArticles = [...topArticles, ...remaining];
+    }
+
+    // Better article count
+    if (selectedCategory === "All") {
+
+      fetchedArticles = fetchedArticles.slice(0, 12);
+
+    } else {
+
+      fetchedArticles = fetchedArticles.slice(0, 10);
+    }
+
+    setArticles(fetchedArticles);
+
+    setLastUpdated(
+
+      new Date().toLocaleTimeString([], {
+
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    );
+
+  } catch (err) {
+
+    console.error(err);
+
+    setError("Unable to load live news feeds.");
+
+  } finally {
+
+    setTimeout(() => {
+
+      setLoading(false);
+
+    }, 1200);
+  }
+};
+
+
 
     fetchNews();
   }, [selectedRegion, selectedCategory, refreshKey]);
@@ -283,6 +210,27 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
 
       {!loading && !error && (
         <div className="max-w-6xl mx-auto flex flex-col gap-5">
+          <div className="flex items-center justify-between mb-5 px-1">
+
+  <div className="flex items-center gap-2">
+
+    <div className="w-2.5 h-2.5 rounded-full bg-green-400 animate-pulse" />
+
+    <p className="text-sm text-gray-300">
+      LIVE AI News Intelligence
+    </p>
+
+  </div>
+
+  <p className="text-xs text-gray-400">
+
+    {lastUpdated
+      ? `Last synced ${lastUpdated}`
+      : "Syncing feeds..."}
+
+  </p>
+
+</div>
           {articles.map((article) => {
             const uniqueId   = article.link || article.title;
             const isExpanded = expandedCard === uniqueId;
