@@ -28,13 +28,15 @@ app.add_middleware(
 )
 
 # ─────────────────────────────────────────────
-# REQUEST MODELS
+# REQUEST MODELS (Updated with Fallbacks)
 # ─────────────────────────────────────────────
 class AnalyzeRequest(BaseModel):
     url: str
+    title: str = ""
+    description: str = ""
 
 # ─────────────────────────────────────────────
-# HOME
+# HOME ROUTE
 # ─────────────────────────────────────────────
 @app.get("/")
 def home():
@@ -45,24 +47,16 @@ def home():
 
 # ─────────────────────────────────────────────
 # NEWS ROUTE
-# KEY FIX: Removed fallback to "All" entirely.
-# The "All" feeds (TOI, NDTV) are general-purpose
-# and pollute every specific category.
-# Instead we return whatever category-specific feeds
-# give us — the frontend filter handles the rest.
 # ─────────────────────────────────────────────
 @app.get("/api/news")
 def get_news(region: str = "India", category: str = "All"):
     try:
-        # Fetch more entries so frontend filter has enough to work with
-        articles = fetch_news(region, category, limit=20)
-
+        articles = fetch_news(region, category, limit=35)
         return {
             "status": "success",
             "count": len(articles),
             "news": articles,
         }
-
     except Exception as e:
         print(f"[NEWS ROUTE ERROR] {e}")
         return {
@@ -72,27 +66,31 @@ def get_news(region: str = "India", category: str = "All"):
         }
 
 # ─────────────────────────────────────────────
-# ANALYZE ROUTE
+# ANALYZE ROUTE (Updated with Smart Fallback)
 # ─────────────────────────────────────────────
 @app.post("/api/analyze")
 def analyze_article(request: AnalyzeRequest):
     try:
         url = request.url
-        article = Article(url)
-        title = "News Article"
+        title = request.title or "News Article"
         content = ""
 
         try:
+            # Attempt to scrape the full article text
+            article = Article(url)
             article.download()
             article.parse()
-            title = article.title or "News Article"
+            
+            if article.title:
+                title = article.title
             content = article.text or ""
+            
         except Exception as scrape_error:
             print(f"[SCRAPING ERROR] {scrape_error}")
-            content = f"Article URL: {url}"
 
+        # Smart Fallback: Use frontend description if scraping fails
         if not content.strip():
-            content = title if title != "News Article" else f"Article URL: {url}"
+            content = request.description if request.description else f"Article URL: {url}"
 
         explanation  = generate_explanation(title, content)
         deep_context = generate_deep_context(title, content)

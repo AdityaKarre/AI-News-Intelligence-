@@ -2,6 +2,19 @@ import { useEffect, useState, useCallback } from "react";
 
 const API_BASE = "https://ai-news-backend-ty0t.onrender.com";
 
+async function fetchWithRetry(url, options = {}, retries = 2, delayMs = 1000) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, options);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res;
+    } catch (err) {
+      if (attempt === retries) throw err;
+      await new Promise((r) => setTimeout(r, delayMs * (attempt + 1)));
+    }
+  }
+}
+
 function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
   const [articles, setArticles]               = useState([]);
   const [expandedCard, setExpandedCard]       = useState(null);
@@ -24,8 +37,7 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
       try {
         setLoading(true);
 
-        // Fetching maximum slice threshold directly from backend stream pipeline
-        const response = await fetch(
+        const response = await fetchWithRetry(
           `${API_BASE}/api/news?region=${selectedRegion}&category=${selectedCategory}&nocache=${Date.now()}`,
           {
             headers: {
@@ -33,22 +45,22 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
               'Pragma': 'no-cache',
               'Expires': '0'
             }
-          }
+          },
+          2,
+          1000
         );
 
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        
-        const data    = await response.json();
-        const fetched = data.news || data.articles || [];
+        const data     = await response.json();
+        const fetched  = data.news || data.articles || [];
 
         setSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
 
         if (fetched.length === 0) {
-          setError("No unpolluted news available for this topic right now. Tap refresh to check for updates.");
+          setError("No news available for this topic right now. Tap refresh to check for updates.");
           return;
         }
 
-        setArticles(fetched);
+        setArticles(fetched.slice(0, 8));
 
       } catch (err) {
         console.error("Fetch error:", err);
@@ -65,11 +77,20 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
     const uniqueId = article.link || article.title;
     try {
       setLoadingCard(uniqueId);
-      const response = await fetch(`${API_BASE}/api/analyze`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: article.link }),
-      });
+      const response = await fetchWithRetry(
+        `${API_BASE}/api/analyze`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ 
+            url: article.link,
+            title: article.title,
+            description: article.description || article.summary
+          }),
+        },
+        1,
+        1500
+      );
       const data = await response.json();
       setAnalysisData((prev) => ({
         ...prev,
