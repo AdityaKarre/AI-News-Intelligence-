@@ -8,55 +8,47 @@ from newspaper import Article
 from datetime import datetime, timedelta
 
 # ─────────────────────────────────────────────────────────────────────────────
-# HIGH-PRECISION INDUSTRY VALIDATION KEYWORDS
+# HIGH-PRECISION SECTOR MARKS (FLEXIBLE VARIATION MATCHING)
 # ─────────────────────────────────────────────────────────────────────────────
 VALIDATION_KEYWORDS = {
     "Technology": [
-        "tech", "technology", "software", "hardware", "app", "apps", "smartphone", "phone", 
-        "laptop", "computer", "chip", "semiconductor", "ai", "artificial intelligence", 
-        "machine learning", "cyber", "cybersecurity", "hack", "cloud", "5g", "internet", 
-        "wifi", "satellite", "robot", "drone", "ev", "electric vehicle", "coding", "developer", 
-        "programming", "api", "google", "apple", "microsoft", "amazon", "meta", "openai", 
-        "tesla", "nvidia", "intel", "samsung", "qualcomm", "amd", "gadget", "device", 
-        "wearable", "smartwatch", "tablet", "launch", "release", "update", "processor", 
-        "iphone", "android", "pixel", "galaxy", "oneplus", "display", "server", "system", "platform"
+        "tech", "softwar", "hardwar", "app", "smartphon", "phon", "laptop", "comput", "chip", 
+        "semiconductor", "ai", "artificial", "cyber", "hack", "cloud", "5g", "internet", "wifi", 
+        "satellit", "robot", "drone", "ev", "electr", "cod", "develop", "program", "api", 
+        "google", "apple", "microsoft", "amazon", "meta", "openai", "tesla", "nvidia", "intel", 
+        "samsung", "qualcomm", "amd", "gadget", "devic", "wearabl", "tablet", "launch", "processor", 
+        "iphone", "android", "pixel", "galaxy", "oneplus", "display", "server"
     ],
     "Business": [
-        "market", "stock", "share", "shares", "economy", "gdp", "inflation", "budget", "trade", 
-        "export", "import", "revenue", "profit", "loss", "earnings", "investment", "investor", 
-        "fund", "ipo", "startup", "company", "corporate", "industry", "sector", "bank", "banking", 
-        "finance", "financial", "tax", "rupee", "dollar", "sensex", "nifty", "bse", "nse", "rbi", 
-        "interest rate", "merger", "acquisition", "deal", "billion", "million", "quarter", 
-        "annual", "results", "growth", "recession", "employment", "job", "layoff", "hire", "ceo", 
-        "cfo", "business", "commerce", "retail", "ecommerce", "sales", "brands", "retailer", "prices", "firm"
+        "market", "stock", "share", "econom", "gdp", "inflat", "budget", "trade", "export", 
+        "import", "revenu", "profit", "loss", "earn", "invest", "fund", "ipo", "startup", 
+        "compani", "corporat", "industri", "sector", "bank", "financ", "tax", "rupee", "dollar", 
+        "sensex", "nifty", "bse", "nse", "rbi", "merger", "acquisit", "deal", "billion", "million", 
+        "commerc", "retail", "ecommerce", "sale", "brand", "price", "firm"
     ],
     "Sports": [
-        "cricket", "football", "soccer", "tennis", "basketball", "hockey", "rugby", "golf", 
-        "athletics", "olympic", "olympics", "ipl", "bcci", "fifa", "match", "tournament", 
-        "championship", "league", "cup", "trophy", "player", "team", "coach", "squad", "innings", 
-        "wicket", "run", "goal", "score", "fixture", "series", "stadium", "transfer", "debut", 
-        "won", "lost", "win", "defeat", "victory", "clash", "game", "play"
+        "cricket", "footbal", "soccer", "tenni", "basketbal", "hockey", "rugby", "golf", 
+        "athlet", "olympic", "ipl", "bcci", "fifa", "match", "tournament", "championship", 
+        "leagu", "cup", "trophi", "player", "team", "coach", "squad", "inn", "wicket", "run", 
+        "goal", "score", "fixtur", "seri", "stadium", "transfer", "debut", "win", "won", "lost"
     ],
     "Entertainment": [
-        "movie", "film", "cinema", "bollywood", "hollywood", "films", "series", "show", "tv", 
-        "ott", "netflix", "amazon prime", "disney", "hotstar", "song", "music", "album", "artist", 
-        "singer", "actor", "actress", "celebrity", "star", "stars", "award", "oscar", "grammy", 
-        "filmfare", "release", "trailer", "review", "box office", "collection", "streaming", 
-        "entertainment", "concert", "tour", "fashion", "interview", "debut", "premiere", "theatre", "teaser"
+        "movi", "film", "cinema", "bollywood", "hollywood", "seri", "show", "tv", "ott", 
+        "netflix", "prime", "disney", "hotstar", "song", "music", "album", "artist", "singer", 
+        "actor", "actress", "celebrity", "star", "award", "oscar", "grammy", "filmfare", "releas", 
+        "trailer", "review", "box", "offic", "stream", "entertain", "concert", "tour", "fashion", "theatr"
     ],
     "Politics": [
-        "government", "parliament", "minister", "prime minister", "president", "election", 
-        "vote", "party", "congress", "bjp", "lok sabha", "rajya sabha", "policy", "law", "bill", 
-        "act", "constitution", "court", "supreme court", "high court", "diplomat", "foreign policy", 
-        "protest", "opposition", "political", "politician", "governance", "administration", 
-        "campaign", "rally", "coalition", "modi", "rahul", "shah", "leaders", "state", "centre",
-        "assembly", "senate", "white house", "biden", "trump", "cm", "pm", "resign", "resigns", "resignation"
+        "govern", "parliament", "minist", "presid", "elect", "vote", "parti", "congress", 
+        "bjp", "lok", "sabha", "rajya", "polici", "law", "bill", "act", "constitut", "court", 
+        "suprem", "diplomat", "protest", "opposit", "politici", "governanc", "administrat", 
+        "campaign", "ralli", "coalit", "modi", "rahul", "shah", "cm", "pm", "resign"
     ]
 }
 
 GLOBAL_GENERAL_BLOCKS = [
     "murder", "rape", "assault", "arrest", "criminal", "custody", "bail", "accident", "highway", 
-    "deadly", "weather alert", "robbery", "theft"
+    "deadly", "weather alert", "robbery", "theft", "stray dog"
 ]
 
 RSS_FEEDS = {
@@ -92,7 +84,7 @@ RSS_FEEDS = {
         ],
         "Sports": [
             "https://www.espncricinfo.com/rss/content/story/feeds/0.xml",
-            "https://feeds.feedburner.com/ndtvcricinfo",
+            "https://feeds.feedburner.com/ndtricinfo",
             "https://indianexpress.com/section/sports/feed/",
             "https://timesofindia.indiatimes.com/rssfeeds/1221666.cms"
         ]
@@ -142,7 +134,6 @@ TITLE_SUFFIXES = [
     " - The Hindu", " - NDTV", " | NDTV News", " - Indian Express",
     " - Livemint", " - Moneycontrol", " | Economic Times",
     " - ESPN", " - TechCrunch", " - The Verge",
-    " | Hollywood Reporter", " – Variety", " - Variety",
 ]
 
 def clean_title(title: str) -> str:
@@ -154,19 +145,23 @@ def fetch_news(region="India", category="All", limit=35):
     articles = []
     seen_titles = set()
 
-    # Pool specific category feeds
-    feeds = list(RSS_FEEDS.get(region, {}).get(category, []))
+    # Base targets setup
+    category_feeds = RSS_FEEDS.get(region, {}).get(category, [])
+    general_feeds = RSS_FEEDS.get(region, {}).get("All", [])
+
+    # Pool strategy: Combine dedicated niche streams with general news tickers
+    feed_registry = []
+    for url in category_feeds:
+        feed_registry.append((url, True)) # True = Pure Dedicated Feed
     
-    # Cross-feed optimization: Pull from general top stories to find hidden matching articles
     if category != "All":
-        general_feeds = RSS_FEEDS.get(region, {}).get("All", [])
-        for f in general_feeds:
-            if f not in feeds:
-                feeds.append(f)
+        for url in general_feeds:
+            if url not in category_feeds:
+                feed_registry.append((url, False)) # False = Mainstream Wire Feed
 
     time_threshold = datetime.utcnow() - timedelta(hours=96)
 
-    for url in feeds:
+    for url, is_dedicated in feed_registry:
         try:
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -182,7 +177,7 @@ def fetch_news(region="India", category="All", limit=35):
             if not feed.entries:
                 continue
 
-            raw_entries = feed.entries[:40]
+            raw_entries = feed.entries[:35]
             random.shuffle(raw_entries)
 
             for entry in raw_entries:
@@ -209,15 +204,31 @@ def fetch_news(region="India", category="All", limit=35):
                     summary = BeautifulSoup(summary, "html.parser").get_text().strip()
                     combined_text = f"{title} {summary}".lower()
 
-                    if any(re.search(r'\b' + re.escape(bw) + r'\b', combined_text) for bw in GLOBAL_GENERAL_BLOCKS):
+                    # 1. Global Noise Safety Block Check
+                    if any(bw in combined_text for bw in GLOBAL_GENERAL_BLOCKS):
                         continue
 
-                    # STRICT BACKEND SHIELD: If it doesn't match the category keywords, drop it instantly
+                    # 2. Feed-Type Intelligent Categorization Logic
                     if category != "All":
                         keywords = VALIDATION_KEYWORDS.get(category, [])
-                        has_match = any(re.search(r'\b' + re.escape(kw) + r'\b', combined_text) for kw in keywords)
-                        if not has_match:
-                            continue
+                        has_keyword = any(kw in combined_text for kw in keywords)
+                        
+                        if is_dedicated:
+                            # Niche feeds are auto-approved. Only drop if explicitly hijacked by a different sector
+                            opposite_sectors = [k for k in VALIDATION_KEYWORDS.keys() if k != category]
+                            hijacked = False
+                            if not has_keyword:
+                                for sector in opposite_sectors:
+                                    sector_score = sum(1 for skw in VALIDATION_KEYWORDS[sector] if skw in combined_text)
+                                    if sector_score >= 2: # Heavy leak signature found
+                                        hijacked = True
+                                        break
+                            if hijacked:
+                                continue
+                        else:
+                            # General wire items MUST hit thematic keywords to be included
+                            if not has_keyword:
+                                continue
 
                     seen_titles.add(title_key)
                     raw_source = feed.feed.title if hasattr(feed, "feed") and hasattr(feed.feed, "title") else "Unknown"
@@ -230,6 +241,7 @@ def fetch_news(region="India", category="All", limit=35):
                         "source": raw_source.strip(),
                         "region": region,
                         "category": category,
+                        "time": published.strftime("%b %d, %Y") if published else "Latest"
                     })
                 except Exception:
                     continue

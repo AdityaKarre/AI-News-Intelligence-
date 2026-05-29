@@ -2,94 +2,6 @@ import { useEffect, useState, useCallback } from "react";
 
 const API_BASE = "https://ai-news-backend-ty0t.onrender.com";
 
-const TARGET_KEYWORDS = {
-  Technology: [
-    "tech", "technology", "software", "hardware", "app", "apps", "smartphone", "phone", 
-    "laptop", "computer", "chip", "semiconductor", "ai", "artificial intelligence", 
-    "machine learning", "cyber", "cybersecurity", "hack", "cloud", "5g", "internet", 
-    "wifi", "satellite", "robot", "drone", "ev", "electric vehicle", "coding", "developer", 
-    "programming", "api", "google", "apple", "microsoft", "amazon", "meta", "openai", 
-    "tesla", "nvidia", "intel", "samsung", "qualcomm", "amd", "gadget", "device", 
-    "wearable", "smartwatch", "tablet", "launch", "release", "update", "processor", 
-    "iphone", "android", "pixel", "galaxy", "oneplus", "display", "server", "system"
-  ],
-  Business: [
-    "market", "stock", "share", "shares", "economy", "gdp", "inflation", "budget", "trade", 
-    "export", "import", "revenue", "profit", "loss", "earnings", "investment", "investor", 
-    "fund", "ipo", "startup", "company", "corporate", "industry", "sector", "bank", "banking", 
-    "finance", "financial", "tax", "rupee", "dollar", "sensex", "nifty", "bse", "nse", "rbi", 
-    "interest rate", "merger", "acquisition", "deal", "billion", "million", "quarter", 
-    "annual", "results", "growth", "recession", "employment", "job", "layoff", "hire", "ceo", "cfo", 
-    "business", "commerce", "retail", "ecommerce", "sales", "brands", "retailer", "prices", "firm"
-  ],
-  Sports: [
-    "cricket", "football", "soccer", "tennis", "basketball", "hockey", "rugby", "golf", 
-    "athletics", "olympic", "olympics", "ipl", "bcci", "fifa", "match", "tournament", 
-    "championship", "league", "cup", "trophy", "player", "team", "coach", "squad", "innings", 
-    "wicket", "run", "goal", "score", "fixture", "series", "stadium", "transfer", "debut", 
-    "won", "lost", "win", "defeat", "victory", "clash"
-  ],
-  Entertainment: [
-    "movie", "film", "cinema", "bollywood", "hollywood", "films", "series", "show", "shows", "tv", 
-    "ott", "netflix", "amazon prime", "disney", "hotstar", "song", "music", "album", "artist", 
-    "singer", "actor", "actress", "celebrity", "star", "stars", "award", "oscar", "grammy", "filmfare", 
-    "release", "trailer", "review", "box office", "collection", "streaming", "entertainment", 
-    "concert", "tour", "fashion", "interview", "debut", "premiere", "theatre", "teaser"
-  ],
-  Politics: [
-    "government", "parliament", "minister", "prime minister", "president", "election", 
-    "vote", "party", "congress", "bjp", "lok sabha", "rajya sabha", "policy", "law", "bill", 
-    "act", "constitution", "court", "supreme court", "high court", "diplomat", "foreign policy", 
-    "protest", "opposition", "political", "politician", "governance", "administration", 
-    "campaign", "rally", "coalition", "modi", "rahul", "shah", "leaders", "state", "centre",
-    "assembly", "senate", "white house", "biden", "trump", "cm", "pm", "resign", "resigns", "resignation"
-  ]
-};
-
-const GLOBAL_BLOCKS = [
-  "murder", "rape", "assault", "arrest", "police", "court", "verdict", "sentence", 
-  "accused", "criminal", "fir ", "custody", "bail", "temple", "mosque", "church", 
-  "communal", "highway", "accident", "protest"
-];
-
-function filterArticles(articles, category) {
-  if (!articles || articles.length === 0) return [];
-  if (category === "All" || !TARGET_KEYWORDS[category]) {
-    return [...articles].sort(() => 0.5 - Math.random()).slice(0, 8);
-  }
-
-  const validTargets = TARGET_KEYWORDS[category];
-
-  const filtered = articles.filter(article => {
-    const text = ((article.title || "") + " " + (article.description || "")).toLowerCase();
-    
-    const containsBlock = GLOBAL_BLOCKS.some(word => text.includes(word));
-    if (containsBlock) return false;
-
-    // STRICT REGEX BOUNDARY CHECK: No partial leaks allowed
-    return validTargets.some(keyword => {
-      const regex = new RegExp(`\\b${keyword}\\b`, 'i');
-      return regex.test(text);
-    });
-  });
-
-  // Loophole Closed: Completely deleted the backup padding routine.
-  return [...filtered].sort(() => 0.5 - Math.random()).slice(0, 8);
-}
-
-async function fetchWithRetry(url, options = {}, retries = 2, delayMs = 1000) {
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      const res = await fetch(url, options);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res;
-    } catch (err) {
-      if (attempt === retries) throw err;
-      await new Promise((r) => setTimeout(r, delayMs * (attempt + 1)));
-    }
-  }
-}
-
 function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
   const [articles, setArticles]               = useState([]);
   const [expandedCard, setExpandedCard]       = useState(null);
@@ -112,7 +24,8 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
       try {
         setLoading(true);
 
-        const response = await fetchWithRetry(
+        // Fetching maximum slice threshold directly from backend stream pipeline
+        const response = await fetch(
           `${API_BASE}/api/news?region=${selectedRegion}&category=${selectedCategory}&nocache=${Date.now()}`,
           {
             headers: {
@@ -120,23 +33,22 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
               'Pragma': 'no-cache',
               'Expires': '0'
             }
-          },
-          2,
-          1000
+          }
         );
 
-        const data     = await response.json();
-        const fetched  = data.news || data.articles || [];
-        const filtered = filterArticles(fetched, selectedCategory);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        const data    = await response.json();
+        const fetched = data.news || data.articles || [];
 
         setSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
 
-        if (filtered.length === 0) {
-          setError("No unpolluted news available for this topic right now. Tap refresh to find incoming streams.");
+        if (fetched.length === 0) {
+          setError("No unpolluted news available for this topic right now. Tap refresh to check for updates.");
           return;
         }
 
-        setArticles(filtered);
+        setArticles(fetched);
 
       } catch (err) {
         console.error("Fetch error:", err);
@@ -153,16 +65,11 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
     const uniqueId = article.link || article.title;
     try {
       setLoadingCard(uniqueId);
-      const response = await fetchWithRetry(
-        `${API_BASE}/api/analyze`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: article.link }),
-        },
-        1,
-        1500
-      );
+      const response = await fetch(`${API_BASE}/api/analyze`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: article.link }),
+      });
       const data = await response.json();
       setAnalysisData((prev) => ({
         ...prev,
