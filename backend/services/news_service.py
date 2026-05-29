@@ -1,9 +1,11 @@
 import feedparser
 import html
+import re
 from datetime import datetime, timedelta
 from newspaper import Article
 
 # ---------------- STRATIFIED REGIONAL RSS ENGINE ---------------- #
+# REFINEMENT: Duplicated keys to seamlessly support both "Business" and "Finance"
 NEWS_FEEDS = {
     "India": {
         "All": [
@@ -23,6 +25,11 @@ NEWS_FEEDS = {
             "https://yourstory.com/feed",
             "https://analyticsindiamag.com/feed/",
             "https://gadgets360.com/rss/feeds"
+        ],
+        "Business": [
+            "https://www.moneycontrol.com/rss/business.xml",
+            "https://economictimes.indiatimes.com/rssfeedsdefault.cms",
+            "https://www.livemint.com/rss/markets"
         ],
         "Finance": [
             "https://www.moneycontrol.com/rss/business.xml",
@@ -57,6 +64,11 @@ NEWS_FEEDS = {
             "https://www.theverge.com/rss/index.xml",
             "https://www.channelnewsasia.com/rssfeed/cna_technology_4016.xml"
         ],
+        "Business": [
+            "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+            "https://www.channelnewsasia.com/rssfeed/cna_business_3911.xml",
+            "https://www.ft.com/?format=rss"
+        ],
         "Finance": [
             "https://www.cnbc.com/id/100003114/device/rss/rss.html",
             "https://www.channelnewsasia.com/rssfeed/cna_business_3911.xml",
@@ -75,16 +87,16 @@ NEWS_FEEDS = {
 }
 
 CATEGORY_KEYWORDS = {
-    "Politics": ["election", "government", "minister", "parliament", "policy", "politics", "modi", "biden", "trump", "bjp", "congress", "court", "summit", "pm ", "president", "cabinet", "mla ", "mp "],
-    "Technology": ["technology", "AI", "startup", "software", "OpenAI", "Google", "Microsoft", "Apple", "robot", "cyber", "phone", "meta", "nvidia", "chip", "gadget", "semiconductor"],
-    "Finance": ["market", "stock", "finance", "economy", "business", "investment", "bank", "RBI", "crypto", "shares", "Sensex", "Nifty", "profit", "revenue", "gdp", "inflation", "funding"],
+    "Politics": ["election", "government", "minister", "parliament", "policy", "politics", "modi", "biden", "trump", "bjp", "congress", "court", "summit", "pm", "president", "cabinet", "mla", "mp"],
+    "Technology": ["technology", "ai", "startup", "software", "openai", "google", "microsoft", "apple", "robot", "cyber", "phone", "meta", "nvidia", "chip", "gadget", "semiconductor"],
+    "Business": ["market", "stock", "finance", "economy", "business", "investment", "bank", "rbi", "crypto", "shares", "sensex", "nifty", "profit", "revenue", "gdp", "inflation", "funding"],
+    "Finance": ["market", "stock", "finance", "economy", "business", "investment", "bank", "rbi", "crypto", "shares", "sensex", "nifty", "profit", "revenue", "gdp", "inflation", "funding"],
     "Sports": ["cricket", "ipl", "football", "match", "player", "team", "tournament", "goal", "sports", "bcci", "stadium", "score", "run", "wicket", "trophy", "t20", "fifa", "premier league"],
     "Entertainment": ["movie", "actor", "film", "bollywood", "hollywood", "celebrity", "music", "show", "series", "netflix", "cinema", "director", "oscar", "box office", "starring"]
 }
 
 AGGREGATOR_BANNED_WORDS = ["roundup", "round-up", "briefing", "news wrap", "top headlines", "things to know", "live updates", "daily digest", "top stories"]
 
-# 🔥 RESUME ENGINEERING FEATURE: Explicit geo-tagging validation array to stop feed bleed-through
 GEO_INDIAN_KEYWORDS = [
     "india", "delhi", "mumbai", "bengaluru", "bangalore", "hyderabad", "chennai", "kolkata", "modi", "isro", 
     "rbi", "supreme court", "bjp", "congress", "sensex", "nifty", "gandhi", "bcci", "amit shah", "mla", "mp"
@@ -122,14 +134,19 @@ def fetch_news(region="India", category="All"):
                 
                 text_to_check = (title_lower + " " + summary.lower())
                 
-                # 🔥 STRICT LEAK FIX: If region is India, validate that it belongs to an domestic topic map
                 if region == "India":
                     if not any(geo_word in text_to_check for geo_word in GEO_INDIAN_KEYWORDS):
-                        continue  # Silently skip international syndicate leaks
+                        continue  
 
+                # REFINEMENT: Strict word boundary regex replacement rules to kill partial leaks
                 if category != "All":
                     keywords = CATEGORY_KEYWORDS.get(category, [])
-                    if not any(keyword.lower() in text_to_check for keyword in keywords):
+                    has_strict_match = False
+                    for keyword in keywords:
+                        if re.search(r'\b' + re.escape(keyword.lower()) + r'\b', text_to_check):
+                            has_strict_match = True
+                            break
+                    if not has_strict_match:
                         continue 
 
                 article = {
