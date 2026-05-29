@@ -1,4 +1,5 @@
 import feedparser
+import requests
 import time
 import random
 import re
@@ -7,7 +8,7 @@ from newspaper import Article
 from datetime import datetime, timedelta
 
 # ─────────────────────────────────────────────────────────────────────────────
-# VALIDATION KEYWORDS (STRICT WORD BOUNDARIES)
+# HIGH-PRECISION VALIDATION KEYWORDS
 # ─────────────────────────────────────────────────────────────────────────────
 VALIDATION_KEYWORDS = {
     "Technology": [
@@ -150,24 +151,39 @@ def clean_title(title: str) -> str:
         title = title.replace(suffix, "")
     return title.strip()
 
+def _parse_feed_safe(url: str, timeout: int = 8):
+    try:
+        # Avoid string manipulation that breaks .cms routes. Pass cache control parameters via headers instead.
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+        resp = requests.get(url, timeout=timeout, headers=headers)
+        resp.raise_for_status()
+        return feedparser.parse(resp.content)
+    except Exception:
+        return None
+
 def fetch_news(region="India", category="All", limit=35):
-    latest_pool = []
+    high_quality_pool = []
+    fallback_pool = []
     seen_titles = set()
 
     feeds = RSS_FEEDS.get(region, {}).get(category, [])
-    time_threshold = datetime.utcnow() - timedelta(hours=72)
+    time_threshold = datetime.utcnow() - timedelta(hours=96) # Expand slightly to capture full weekend cycles safely
 
     for url in feeds:
         try:
-            timestamp = int(time.time())
-            cache_bust_url = f"{url}&t={timestamp}" if "?" in url else f"{url}?t={timestamp}"
-            feed = feedparser.parse(cache_bust_url)
+            feed = _parse_feed_safe(url, timeout=8)
+            if feed is None or not feed.entries:
+                continue
             
-            # Pull a deeper raw pool from each feed to ensure plenty of refresh material
-            entries = feed.entries[:40]
-            random.shuffle(entries)
+            raw_entries = feed.entries[:40]
+            random.shuffle(raw_entries)
 
-            for entry in entries:
+            for entry in raw_entries:
                 try:
                     published = None
                     if hasattr(entry, "published_parsed") and entry.published_parsed:
@@ -191,21 +207,14 @@ def fetch_news(region="India", category="All", limit=35):
                     summary = BeautifulSoup(summary, "html.parser").get_text().strip()
                     combined_text = f"{title} {summary}".lower()
 
-                    # 1. Regex Safety Block Filter
+                    # 1. Clear Global Blocks completely
                     if any(re.search(r'\b' + re.escape(bw) + r'\b', combined_text) for bw in GLOBAL_GENERAL_BLOCKS):
                         continue
-
-                    # 2. Strict Regex Category Check (Bypasses keyword parts like 'start' inside 'started')
-                    if category != "All":
-                        keywords = VALIDATION_KEYWORDS.get(category, [])
-                        score = sum(1 for kw in keywords if re.search(r'\b' + re.escape(kw) + r'\b', combined_text))
-                        if score == 0:
-                            continue  # Drop leak instantly
 
                     seen_titles.add(title_key)
                     raw_source = feed.feed.title if hasattr(feed, "feed") and hasattr(feed.feed, "title") else "Unknown"
 
-                    latest_pool.append({
+                    article_data = {
                         "title": title,
                         "description": summary[:250],
                         "summary": summary,
@@ -213,15 +222,30 @@ def fetch_news(region="India", category="All", limit=35):
                         "source": raw_source.strip(),
                         "region": region,
                         "category": category,
-                    })
+                    }
+
+                    # 2. Sort by match quality. If it's a sub-category feed, separate high-keyword hits from clean contextual links.
+                    if category != "All":
+                        keywords = VALIDATION_KEYWORDS.get(category, [])
+                        score = sum(1 for kw in keywords if re.search(r'\b' + re.escape(kw) + r'\b', combined_text))
+                        if score > 0:
+                            high_quality_pool.append(article_data)
+                        else:
+                            fallback_pool.append(article_data)
+                    else:
+                        high_quality_pool.append(article_data)
+
                 except Exception:
                     continue
         except Exception:
             continue
 
-    random.shuffle(latest_pool)
-    # Return a high pool threshold (60 items) so frontend always has fresh layout shuffle elements
-    return latest_pool[:60]
+    # Mix together to prioritize clear thematic hits first, using clean niche entries to ensure a stable fallback count
+    random.shuffle(high_quality_pool)
+    random.shuffle(fallback_pool)
+    
+    final_combined_pool = high_quality_pool + fallback_pool
+    return final_combined_pool[:limit]
 
 def extract_full_article(url):
     try:

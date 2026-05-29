@@ -19,7 +19,7 @@ const TARGET_KEYWORDS = {
     "ipo", "startup", "company", "corporate", "industry", "sector", "bank", "banking", 
     "finance", "financial", "tax", "rupee", "dollar", "sensex", "nifty", "bse", "nse", "rbi", 
     "interest rate", "merger", "acquisition", "deal", "billion", "million", "quarter", 
-    "annual", "results", "growth", "recession", "employment", "job", "layoff", "hire", "ceo", "cfo", 
+    "annual", "growth", "recession", "employment", "job", "layoff", "hire", "ceo", "cfo", 
     "business", "commerce", "retail", "ecommerce", "sales", "brands", "retailer", "prices", "firm"
   ],
   Sports: [
@@ -58,15 +58,17 @@ function filterArticles(articles, category) {
   }
 
   const validTargets = TARGET_KEYWORDS[category];
+  const perfectPool = [];
+  const backupPool = [];
 
-  const highQualityPool = articles.filter(article => {
+  articles.forEach(article => {
     const text = ((article.title || "") + " " + (article.description || "")).toLowerCase();
     
-    // 1. Strict General Blocks check
+    // 1. Drop severe blocks completely
     const containsBlock = GLOBAL_BLOCKS.some(word => text.includes(word));
-    if (containsBlock) return false;
+    if (containsBlock) return;
 
-    // 2. Strict Exact Word Regex Check
+    // 2. Scan exact word boundaries via regex
     let hasMatch = false;
     for (let i = 0; i < validTargets.length; i++) {
       const regex = new RegExp(`\\b${validTargets[i]}\\b`, 'i');
@@ -75,11 +77,22 @@ function filterArticles(articles, category) {
         break;
       }
     }
-    return hasMatch;
+
+    if (hasMatch) {
+      perfectPool.append(article);
+    } else {
+      backupPool.append(article);
+    }
   });
 
-  // Loophole Closed: Completely removed the old padding loop that injected junk data
-  return [...highQualityPool].sort(() => 0.5 - Math.random()).slice(0, 8);
+  // Dynamic Fallback Layer: If strict word matches run low, populate using clean niche items
+  let finalResult = [...perfectPool].sort(() => 0.5 - Math.random());
+  if (finalResult.length < 5) {
+    const mixedBackup = [...backupPool].sort(() => 0.5 - Math.random());
+    finalResult = [...finalResult, ...mixedBackup];
+  }
+
+  return finalResult.slice(0, 8);
 }
 
 async function fetchWithRetry(url, options = {}, retries = 2, delayMs = 1000) {
