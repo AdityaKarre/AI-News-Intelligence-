@@ -19,7 +19,7 @@ const TARGET_KEYWORDS = {
     "ipo", "startup", "company", "corporate", "industry", "sector", "bank", "banking", 
     "finance", "financial", "tax", "rupee", "dollar", "sensex", "nifty", "bse", "nse", "rbi", 
     "interest rate", "merger", "acquisition", "deal", "billion", "million", "quarter", 
-    "annual", "growth", "recession", "employment", "job", "layoff", "hire", "ceo", "cfo", 
+    "annual", "results", "growth", "recession", "employment", "job", "layoff", "hire", "ceo", "cfo", 
     "business", "commerce", "retail", "ecommerce", "sales", "brands", "retailer", "prices", "firm"
   ],
   Sports: [
@@ -64,7 +64,7 @@ function filterArticles(articles, category) {
   articles.forEach(article => {
     const text = ((article.title || "") + " " + (article.description || "")).toLowerCase();
     
-    // 1. Drop severe blocks completely
+    // 1. Drop heavy noise blocks completely
     const containsBlock = GLOBAL_BLOCKS.some(word => text.includes(word));
     if (containsBlock) return;
 
@@ -78,14 +78,15 @@ function filterArticles(articles, category) {
       }
     }
 
+    // FIXED: Swapped out broken Python .append() for JavaScript .push()
     if (hasMatch) {
-      perfectPool.append(article);
+      perfectPool.push(article);
     } else {
-      backupPool.append(article);
+      backupPool.push(article);
     }
   });
 
-  // Dynamic Fallback Layer: If strict word matches run low, populate using clean niche items
+  // Dynamic Context Layer: If strict word matches run low, populate cleanly using contextual niche feeds
   let finalResult = [...perfectPool].sort(() => 0.5 - Math.random());
   if (finalResult.length < 5) {
     const mixedBackup = [...backupPool].sort(() => 0.5 - Math.random());
