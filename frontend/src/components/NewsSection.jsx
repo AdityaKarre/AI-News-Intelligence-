@@ -60,6 +60,7 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
           return;
         }
 
+        // Backend feeds are pure and pre-shuffled. Serve them directly!
         setArticles(fetched.slice(0, 8));
 
       } catch (err) {
@@ -135,7 +136,6 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
 
   return (
     <section className="relative z-10 px-4 sm:px-6 lg:px-10 pb-20">
-
       {syncTime && !loading && (
         <div className="max-w-6xl mx-auto mb-4 text-right">
           <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-medium backdrop-blur-md">
