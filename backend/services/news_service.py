@@ -1,272 +1,156 @@
 import feedparser
-import requests
-import random
-
-from bs4 import BeautifulSoup
-from newspaper import Article
+import html
 from datetime import datetime, timedelta
+from newspaper import Article
 
-# ─────────────────────────────────────────────
-# RSS FEEDS
-# ─────────────────────────────────────────────
-
-RSS_FEEDS = {
-
+# ---------------- STRATIFIED REGIONAL RSS ENGINE ---------------- #
+NEWS_FEEDS = {
     "India": {
-
         "All": [
-
-            "https://timesofindia.indiatimes.com/rssfeedstopstories.cms",
-            "https://feeds.feedburner.com/ndtvnews-top-stories",
-            "https://indianexpress.com/section/india/feed/",
-            "https://www.thehindu.com/news/national/feeder/default.rss"
+            "https://timesofindia.indiatimes.com/rssfeeds/-2128936835.cms", 
+            "https://feeds.feedburner.com/ndtvnews-india-news",             
+            "https://www.thehindu.com/news/national/feeder/default.rss",    
+            "https://www.hindustantimes.com/feeds/rss/india-news/rssfeed.xml",
+            "https://www.moneycontrol.com/rss/business.xml",
+            "https://economictimes.indiatimes.com/rssfeedsdefault.cms"
         ],
-
         "Politics": [
-
+            "https://timesofindia.indiatimes.com/rssfeeds/-2128936835.cms",
             "https://www.thehindu.com/news/national/feeder/default.rss",
             "https://indianexpress.com/section/political-pulse/feed/"
         ],
-
         "Technology": [
-
-            "https://feeds.feedburner.com/gadgets360-latest",
-            "https://tech.hindustantimes.com/rss/topnews/rssfeed.xml"
+            "https://yourstory.com/feed",
+            "https://analyticsindiamag.com/feed/",
+            "https://gadgets360.com/rss/feeds"
         ],
-
         "Finance": [
-
             "https://www.moneycontrol.com/rss/business.xml",
+            "https://economictimes.indiatimes.com/rssfeedsdefault.cms",
             "https://www.livemint.com/rss/markets"
         ],
-
         "Sports": [
-
-            "https://www.espncricinfo.com/rss/content/story/feeds/0.xml",
-            "https://sports.ndtv.com/rss/all"
+            "https://www.cricbuzz.com/rss-feeds/news",
+            "https://timesofindia.indiatimes.com/rssfeeds/4719148.cms",
+            "https://indianexpress.com/section/sports/feed/"
         ],
-
         "Entertainment": [
-
-            "https://www.bollywoodhungama.com/rss/news.xml",
-            "https://www.ndtv.com/entertainment/feed"
+            "https://timesofindia.indiatimes.com/rssfeeds/1081479906.cms",
+            "https://indianexpress.com/section/entertainment/feed/"
         ]
     },
-
     "World": {
-
         "All": [
-
-            "http://rss.cnn.com/rss/edition.rss",
-            "http://feeds.bbci.co.uk/news/rss.xml",
-            "https://feeds.reuters.com/reuters/topNews",
-            "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml"
+            "https://www.aljazeera.com/xml/rss/all.xml",
+            "https://www.channelnewsasia.com/rssfeed/cna_international_3856.xml",
+            "http://feeds.bbci.co.uk/news/world/rss.xml",
+            "https://rss.cnn.com/rss/edition.rss",
+            "https://www.theguardian.com/world/rss"
         ],
-
         "Politics": [
-
-            "http://rss.cnn.com/rss/cnn_allpolitics.rss",
-            "https://feeds.bbci.co.uk/news/politics/rss.xml"
+            "https://www.aljazeera.com/xml/rss/all.xml",
+            "http://feeds.bbci.co.uk/news/politics/rss.xml",
+            "https://www.france24.com/en/europe/rss"
         ],
-
         "Technology": [
-
             "https://techcrunch.com/feed/",
-            "https://www.theverge.com/rss/index.xml"
+            "https://www.theverge.com/rss/index.xml",
+            "https://www.channelnewsasia.com/rssfeed/cna_technology_4016.xml"
         ],
-
         "Finance": [
-
-            "https://feeds.reuters.com/news/usbusiness",
-            "https://www.cnbc.com/id/10001147/device/rss/rss.html"
+            "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+            "https://www.channelnewsasia.com/rssfeed/cna_business_3911.xml",
+            "https://www.ft.com/?format=rss"
         ],
-
         "Sports": [
-
+            "http://feeds.bbci.co.uk/sport/rss.xml",
             "https://www.espn.com/espn/rss/news",
-            "https://sports.yahoo.com/top/rss.xml"
+            "https://www.aljazeera.com/xml/rss/sport.xml"
         ],
-
         "Entertainment": [
-
-            "https://www.hollywoodreporter.com/feed/",
-            "https://variety.com/feed/"
+            "http://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml",
+            "https://www.reutersagency.com/feed/?best-topics=entertainment"
         ]
     }
 }
 
-# ─────────────────────────────────────────────
-# FETCH NEWS
-# ─────────────────────────────────────────────
+CATEGORY_KEYWORDS = {
+    "Politics": ["election", "government", "minister", "parliament", "policy", "politics", "modi", "biden", "trump", "bjp", "congress", "court", "summit", "pm ", "president", "cabinet", "mla ", "mp "],
+    "Technology": ["technology", "AI", "startup", "software", "OpenAI", "Google", "Microsoft", "Apple", "robot", "cyber", "phone", "meta", "nvidia", "chip", "gadget", "semiconductor"],
+    "Finance": ["market", "stock", "finance", "economy", "business", "investment", "bank", "RBI", "crypto", "shares", "Sensex", "Nifty", "profit", "revenue", "gdp", "inflation", "funding"],
+    "Sports": ["cricket", "ipl", "football", "match", "player", "team", "tournament", "goal", "sports", "bcci", "stadium", "score", "run", "wicket", "trophy", "t20", "fifa", "premier league"],
+    "Entertainment": ["movie", "actor", "film", "bollywood", "hollywood", "celebrity", "music", "show", "series", "netflix", "cinema", "director", "oscar", "box office", "starring"]
+}
+
+AGGREGATOR_BANNED_WORDS = ["roundup", "round-up", "briefing", "news wrap", "top headlines", "things to know", "live updates", "daily digest", "top stories"]
+
+# 🔥 RESUME ENGINEERING FEATURE: Explicit geo-tagging validation array to stop feed bleed-through
+GEO_INDIAN_KEYWORDS = [
+    "india", "delhi", "mumbai", "bengaluru", "bangalore", "hyderabad", "chennai", "kolkata", "modi", "isro", 
+    "rbi", "supreme court", "bjp", "congress", "sensex", "nifty", "gandhi", "bcci", "amit shah", "mla", "mp"
+]
 
 def fetch_news(region="India", category="All"):
+    all_articles = []
+    time_threshold = datetime.utcnow() - timedelta(hours=48)
 
-    articles = []
-
-    feeds = RSS_FEEDS.get(region, {}).get(category, [])
-
-    time_threshold = datetime.utcnow() - timedelta(hours=24)
+    try:
+        feeds = NEWS_FEEDS[region][category]
+    except KeyError:
+        feeds = NEWS_FEEDS[region]["All"]
 
     for url in feeds:
-
         try:
-
             feed = feedparser.parse(url)
-
-            # GET LARGER ARTICLE POOL
-
-            entries = feed.entries[:20]
-
-            # RANDOMIZE ARTICLES
-
-            random.shuffle(entries)
-
-            for entry in entries:
-
-                try:
-
-                    published = None
-
-                    if hasattr(entry, "published_parsed"):
-
-                        published = datetime(*entry.published_parsed[:6])
-
-                    # SKIP OLD ARTICLES
-
-                    if (
-                        published
-                        and
-                        published < time_threshold
-                    ):
-
-                        continue
-
-                    title = entry.get("title", "No Title")
-
-                    link = entry.get("link", "")
-
-                    summary = entry.get("summary", "")
-
-                    source = (
-                        feed.feed.title
-                        if hasattr(feed, "feed")
-                        else "Unknown"
-                    )
-
-                    # CLEAN HTML SUMMARY
-
-                    summary = BeautifulSoup(
-                        summary,
-                        "html.parser"
-                    ).get_text()
-
-                    # ARTICLE OBJECT
-
-                    article_data = {
-
-                        "title": title,
-
-                        "link": link,
-
-                        "summary": summary,
-
-                        "source": source,
-
-                        "published": published
-                    }
-
-                    articles.append(article_data)
-
-                except Exception:
+            for entry in feed.entries[:20]:
+                raw_title = entry.get("title", "")
+                summary = entry.get("summary", "")
+                
+                title = html.unescape(raw_title).strip()
+                if not title or len(title.split()) < 4:
+                    continue
+                
+                title_lower = title.lower()
+                if any(banned in title_lower for banned in AGGREGATOR_BANNED_WORDS):
                     continue
 
+                pub_parsed = entry.get("published_parsed") or entry.get("updated_parsed")
+                if pub_parsed:
+                    pub_datetime = datetime(*pub_parsed[:6])
+                    if pub_datetime < time_threshold:
+                        continue 
+                
+                text_to_check = (title_lower + " " + summary.lower())
+                
+                # 🔥 STRICT LEAK FIX: If region is India, validate that it belongs to an domestic topic map
+                if region == "India":
+                    if not any(geo_word in text_to_check for geo_word in GEO_INDIAN_KEYWORDS):
+                        continue  # Silently skip international syndicate leaks
+
+                if category != "All":
+                    keywords = CATEGORY_KEYWORDS.get(category, [])
+                    if not any(keyword.lower() in text_to_check for keyword in keywords):
+                        continue 
+
+                article = {
+                    "source": feed.feed.get("title", "Breaking News Engine"),
+                    "title": title,
+                    "summary": html.unescape(summary),
+                    "link": entry.get("link", "")
+                }
+                
+                if not any(a["link"] == article["link"] for a in all_articles):
+                    all_articles.append(article)
         except Exception:
-            continue
-
-    # REMOVE DUPLICATES
-
-    unique_articles = []
-
-    seen_links = set()
-
-    for article in articles:
-
-        if article["link"] not in seen_links:
-
-            unique_articles.append(article)
-
-            seen_links.add(article["link"])
-
-    # SORT BY LATEST
-
-    unique_articles.sort(
-        key=lambda x:
-        x["published"]
-        if x["published"]
-        else datetime.min,
-        reverse=True
-    )
-
-    # RANDOMIZE SLIGHTLY AMONG LATEST
-
-    latest_pool = unique_articles[:30]
-
-    random.shuffle(latest_pool)
-
-    return latest_pool
-
-# ─────────────────────────────────────────────
-# EXTRACT FULL ARTICLE
-# ─────────────────────────────────────────────
+            pass
+            
+    return all_articles
 
 def extract_full_article(url):
-
     try:
-
         article = Article(url)
-
         article.download()
-
         article.parse()
-
-        text = article.text
-
-        if text and len(text) > 200:
-
-            return text
-
+        return article.text
     except Exception:
-        pass
-
-    # FALLBACK METHOD
-
-    try:
-
-        response = requests.get(
-            url,
-            timeout=10,
-            headers={
-                "User-Agent":
-                "Mozilla/5.0"
-            }
-        )
-
-        soup = BeautifulSoup(
-            response.text,
-            "html.parser"
-        )
-
-        paragraphs = soup.find_all("p")
-
-        text = " ".join(
-            [
-                p.get_text()
-                for p in paragraphs
-            ]
-        )
-
-        return text
-
-    except Exception:
-
         return ""
