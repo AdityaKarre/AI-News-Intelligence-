@@ -8,7 +8,7 @@ from newspaper import Article
 from datetime import datetime, timedelta
 
 # ─────────────────────────────────────────────────────────────────────────────
-# HIGH-PRECISION VALIDATION KEYWORDS
+# HIGH-PRECISION INDUSTRY VALIDATION KEYWORDS
 # ─────────────────────────────────────────────────────────────────────────────
 VALIDATION_KEYWORDS = {
     "Technology": [
@@ -22,9 +22,9 @@ VALIDATION_KEYWORDS = {
         "iphone", "android", "pixel", "galaxy", "oneplus", "display", "server", "system", "platform"
     ],
     "Business": [
-        "market", "stock", "share", "economy", "gdp", "inflation", "budget", "trade", "export", 
-        "import", "revenue", "profit", "loss", "earnings", "investment", "investor", "fund", 
-        "ipo", "startup", "company", "corporate", "industry", "sector", "bank", "banking", 
+        "market", "stock", "share", "shares", "economy", "gdp", "inflation", "budget", "trade", 
+        "export", "import", "revenue", "profit", "loss", "earnings", "investment", "investor", 
+        "fund", "ipo", "startup", "company", "corporate", "industry", "sector", "bank", "banking", 
         "finance", "financial", "tax", "rupee", "dollar", "sensex", "nifty", "bse", "nse", "rbi", 
         "interest rate", "merger", "acquisition", "deal", "billion", "million", "quarter", 
         "annual", "results", "growth", "recession", "employment", "job", "layoff", "hire", "ceo", 
@@ -40,9 +40,9 @@ VALIDATION_KEYWORDS = {
     "Entertainment": [
         "movie", "film", "cinema", "bollywood", "hollywood", "films", "series", "show", "tv", 
         "ott", "netflix", "amazon prime", "disney", "hotstar", "song", "music", "album", "artist", 
-        "singer", "actor", "actress", "celebrity", "star", "award", "oscar", "grammy", "filmfare", 
-        "release", "trailer", "review", "box office", "collection", "streaming", "entertainment", 
-        "concert", "tour", "fashion", "interview", "debut", "premiere", "television", "theatre", "teaser"
+        "singer", "actor", "actress", "celebrity", "star", "stars", "award", "oscar", "grammy", 
+        "filmfare", "release", "trailer", "review", "box office", "collection", "streaming", 
+        "entertainment", "concert", "tour", "fashion", "interview", "debut", "premiere", "theatre", "teaser"
     ],
     "Politics": [
         "government", "parliament", "minister", "prime minister", "president", "election", 
@@ -50,14 +50,13 @@ VALIDATION_KEYWORDS = {
         "act", "constitution", "court", "supreme court", "high court", "diplomat", "foreign policy", 
         "protest", "opposition", "political", "politician", "governance", "administration", 
         "campaign", "rally", "coalition", "modi", "rahul", "shah", "leaders", "state", "centre",
-        "assembly", "senate", "white house", "biden", "trump", "cm", "pm"
+        "assembly", "senate", "white house", "biden", "trump", "cm", "pm", "resign", "resigns", "resignation"
     ]
 }
 
 GLOBAL_GENERAL_BLOCKS = [
     "murder", "rape", "assault", "arrest", "criminal", "custody", "bail", "accident", "highway", 
-    "deadly", "ebola", "virus", "scare", "isolated", "testing", "hospital", "patients", "flight snag",
-    "snag", "airspace", "landed safely", "turned back", "stray dog", "weather alert", "robbery", "theft"
+    "deadly", "weather alert", "robbery", "theft"
 ]
 
 RSS_FEEDS = {
@@ -151,35 +150,38 @@ def clean_title(title: str) -> str:
         title = title.replace(suffix, "")
     return title.strip()
 
-def _parse_feed_safe(url: str, timeout: int = 8):
-    try:
-        # Avoid string manipulation that breaks .cms routes. Pass cache control parameters via headers instead.
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            "Pragma": "no-cache",
-            "Expires": "0"
-        }
-        resp = requests.get(url, timeout=timeout, headers=headers)
-        resp.raise_for_status()
-        return feedparser.parse(resp.content)
-    except Exception:
-        return None
-
 def fetch_news(region="India", category="All", limit=35):
-    high_quality_pool = []
-    fallback_pool = []
+    articles = []
     seen_titles = set()
 
-    feeds = RSS_FEEDS.get(region, {}).get(category, [])
-    time_threshold = datetime.utcnow() - timedelta(hours=96) # Expand slightly to capture full weekend cycles safely
+    # Pool specific category feeds
+    feeds = list(RSS_FEEDS.get(region, {}).get(category, []))
+    
+    # Cross-feed optimization: Pull from general top stories to find hidden matching articles
+    if category != "All":
+        general_feeds = RSS_FEEDS.get(region, {}).get("All", [])
+        for f in general_feeds:
+            if f not in feeds:
+                feeds.append(f)
+
+    time_threshold = datetime.utcnow() - timedelta(hours=96)
 
     for url in feeds:
         try:
-            feed = _parse_feed_safe(url, timeout=8)
-            if feed is None or not feed.entries:
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+            resp = requests.get(url, timeout=8, headers=headers)
+            if resp.status_code != 200:
                 continue
             
+            feed = feedparser.parse(resp.content)
+            if not feed.entries:
+                continue
+
             raw_entries = feed.entries[:40]
             random.shuffle(raw_entries)
 
@@ -192,8 +194,8 @@ def fetch_news(region="India", category="All", limit=35):
                     if published and published < time_threshold:
                         continue
 
-                    title = entry.get("title", "No Title").strip()
-                    if not title or title == "No Title":
+                    title = entry.get("title", "").strip()
+                    if not title or title.lower() == "no title":
                         continue
 
                     title = clean_title(title)
@@ -207,14 +209,20 @@ def fetch_news(region="India", category="All", limit=35):
                     summary = BeautifulSoup(summary, "html.parser").get_text().strip()
                     combined_text = f"{title} {summary}".lower()
 
-                    # 1. Clear Global Blocks completely
                     if any(re.search(r'\b' + re.escape(bw) + r'\b', combined_text) for bw in GLOBAL_GENERAL_BLOCKS):
                         continue
+
+                    # STRICT BACKEND SHIELD: If it doesn't match the category keywords, drop it instantly
+                    if category != "All":
+                        keywords = VALIDATION_KEYWORDS.get(category, [])
+                        has_match = any(re.search(r'\b' + re.escape(kw) + r'\b', combined_text) for kw in keywords)
+                        if not has_match:
+                            continue
 
                     seen_titles.add(title_key)
                     raw_source = feed.feed.title if hasattr(feed, "feed") and hasattr(feed.feed, "title") else "Unknown"
 
-                    article_data = {
+                    articles.append({
                         "title": title,
                         "description": summary[:250],
                         "summary": summary,
@@ -222,30 +230,14 @@ def fetch_news(region="India", category="All", limit=35):
                         "source": raw_source.strip(),
                         "region": region,
                         "category": category,
-                    }
-
-                    # 2. Sort by match quality. If it's a sub-category feed, separate high-keyword hits from clean contextual links.
-                    if category != "All":
-                        keywords = VALIDATION_KEYWORDS.get(category, [])
-                        score = sum(1 for kw in keywords if re.search(r'\b' + re.escape(kw) + r'\b', combined_text))
-                        if score > 0:
-                            high_quality_pool.append(article_data)
-                        else:
-                            fallback_pool.append(article_data)
-                    else:
-                        high_quality_pool.append(article_data)
-
+                    })
                 except Exception:
                     continue
         except Exception:
             continue
 
-    # Mix together to prioritize clear thematic hits first, using clean niche entries to ensure a stable fallback count
-    random.shuffle(high_quality_pool)
-    random.shuffle(fallback_pool)
-    
-    final_combined_pool = high_quality_pool + fallback_pool
-    return final_combined_pool[:limit]
+    random.shuffle(articles)
+    return articles[:limit]
 
 def extract_full_article(url):
     try:

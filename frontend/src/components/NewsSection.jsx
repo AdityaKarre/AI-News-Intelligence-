@@ -14,9 +14,9 @@ const TARGET_KEYWORDS = {
     "iphone", "android", "pixel", "galaxy", "oneplus", "display", "server", "system"
   ],
   Business: [
-    "market", "stock", "share", "economy", "gdp", "inflation", "budget", "trade", "export", 
-    "import", "revenue", "profit", "loss", "earnings", "investment", "investor", "fund", 
-    "ipo", "startup", "company", "corporate", "industry", "sector", "bank", "banking", 
+    "market", "stock", "share", "shares", "economy", "gdp", "inflation", "budget", "trade", 
+    "export", "import", "revenue", "profit", "loss", "earnings", "investment", "investor", 
+    "fund", "ipo", "startup", "company", "corporate", "industry", "sector", "bank", "banking", 
     "finance", "financial", "tax", "rupee", "dollar", "sensex", "nifty", "bse", "nse", "rbi", 
     "interest rate", "merger", "acquisition", "deal", "billion", "million", "quarter", 
     "annual", "results", "growth", "recession", "employment", "job", "layoff", "hire", "ceo", "cfo", 
@@ -30,18 +30,19 @@ const TARGET_KEYWORDS = {
     "won", "lost", "win", "defeat", "victory", "clash"
   ],
   Entertainment: [
-    "movie", "film", "cinema", "bollywood", "hollywood", "films", "series", "show", "tv", 
+    "movie", "film", "cinema", "bollywood", "hollywood", "films", "series", "show", "shows", "tv", 
     "ott", "netflix", "amazon prime", "disney", "hotstar", "song", "music", "album", "artist", 
-    "singer", "actor", "actress", "celebrity", "star", "award", "oscar", "grammy", "filmfare", 
+    "singer", "actor", "actress", "celebrity", "star", "stars", "award", "oscar", "grammy", "filmfare", 
     "release", "trailer", "review", "box office", "collection", "streaming", "entertainment", 
-    "concert", "tour", "fashion", "interview", "debut", "premiere", "television", "theatre", "teaser"
+    "concert", "tour", "fashion", "interview", "debut", "premiere", "theatre", "teaser"
   ],
   Politics: [
     "government", "parliament", "minister", "prime minister", "president", "election", 
     "vote", "party", "congress", "bjp", "lok sabha", "rajya sabha", "policy", "law", "bill", 
     "act", "constitution", "court", "supreme court", "high court", "diplomat", "foreign policy", 
     "protest", "opposition", "political", "politician", "governance", "administration", 
-    "campaign", "rally", "coalition", "modi", "rahul", "shah", "leaders", "state", "centre"
+    "campaign", "rally", "coalition", "modi", "rahul", "shah", "leaders", "state", "centre",
+    "assembly", "senate", "white house", "biden", "trump", "cm", "pm", "resign", "resigns", "resignation"
   ]
 };
 
@@ -58,42 +59,22 @@ function filterArticles(articles, category) {
   }
 
   const validTargets = TARGET_KEYWORDS[category];
-  const perfectPool = [];
-  const backupPool = [];
 
-  articles.forEach(article => {
+  const filtered = articles.filter(article => {
     const text = ((article.title || "") + " " + (article.description || "")).toLowerCase();
     
-    // 1. Drop heavy noise blocks completely
     const containsBlock = GLOBAL_BLOCKS.some(word => text.includes(word));
-    if (containsBlock) return;
+    if (containsBlock) return false;
 
-    // 2. Scan exact word boundaries via regex
-    let hasMatch = false;
-    for (let i = 0; i < validTargets.length; i++) {
-      const regex = new RegExp(`\\b${validTargets[i]}\\b`, 'i');
-      if (regex.test(text)) {
-        hasMatch = true;
-        break;
-      }
-    }
-
-    // FIXED: Swapped out broken Python .append() for JavaScript .push()
-    if (hasMatch) {
-      perfectPool.push(article);
-    } else {
-      backupPool.push(article);
-    }
+    // STRICT REGEX BOUNDARY CHECK: No partial leaks allowed
+    return validTargets.some(keyword => {
+      const regex = new RegExp(`\\b${keyword}\\b`, 'i');
+      return regex.test(text);
+    });
   });
 
-  // Dynamic Context Layer: If strict word matches run low, populate cleanly using contextual niche feeds
-  let finalResult = [...perfectPool].sort(() => 0.5 - Math.random());
-  if (finalResult.length < 5) {
-    const mixedBackup = [...backupPool].sort(() => 0.5 - Math.random());
-    finalResult = [...finalResult, ...mixedBackup];
-  }
-
-  return finalResult.slice(0, 8);
+  // Loophole Closed: Completely deleted the backup padding routine.
+  return [...filtered].sort(() => 0.5 - Math.random()).slice(0, 8);
 }
 
 async function fetchWithRetry(url, options = {}, retries = 2, delayMs = 1000) {
@@ -151,7 +132,7 @@ function NewsSection({ selectedRegion, selectedCategory, refreshKey }) {
         setSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
 
         if (filtered.length === 0) {
-          setError("Can't find or load any targeted news for this topic at the moment.");
+          setError("No unpolluted news available for this topic right now. Tap refresh to find incoming streams.");
           return;
         }
 
