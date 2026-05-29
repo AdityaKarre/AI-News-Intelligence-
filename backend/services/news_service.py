@@ -114,7 +114,7 @@ def fetch_news(region="India", category="All"):
     for url in feeds:
         try:
             feed = feedparser.parse(url)
-            for entry in feed.entries[:20]:
+            for entry in feed.entries[:35]:
                 raw_title = entry.get("title", "")
                 summary = entry.get("summary", "")
                 
@@ -134,19 +134,21 @@ def fetch_news(region="India", category="All"):
                 
                 text_to_check = (title_lower + " " + summary.lower())
                 
+                # Keep India feeds inclusive
                 if region == "India":
-                    if not any(geo_word in text_to_check for geo_word in GEO_INDIAN_KEYWORDS):
-                        continue  
+                    pass  
 
-                # REFINEMENT: Strict word boundary regex replacement rules to kill partial leaks
                 if category != "All":
+
                     keywords = CATEGORY_KEYWORDS.get(category, [])
-                    has_strict_match = False
-                    for keyword in keywords:
-                        if re.search(r'\b' + re.escape(keyword.lower()) + r'\b', text_to_check):
-                            has_strict_match = True
-                            break
-                    if not has_strict_match:
+
+                    score = sum(
+                    keyword.lower() in text_to_check
+                    for keyword in keywords
+                    )
+
+                # Only reject completely unrelated content
+                    if score == 0 and len(summary) > 150:
                         continue 
 
                 article = {
