@@ -66,39 +66,40 @@ const response = await fetch(
   };
 
   // Scroll visibility for 'Back to Top' element
-  useEffect(() => {
-    const handleScroll = () => setShowScrollTop(window.scrollY > 400);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+//   useEffect(() => {
+//   window.addEventListener("popstate", handlePopState);
+
+//   return () => {
+//     window.removeEventListener("popstate", handlePopState);
+//   };
+// }, [hasExplored, selectedArticle, showDeepContext]);
 
   // 🛡️ HIERARCHICAL HARDWARE BACK-BUTTON INTERCEPT STACK
   useEffect(() => {
-    const handlePopState = (event) => {
-      if (showDeepContext) {
-        event.preventDefault();
-        setShowDeepContext(false);
-        window.history.pushState({ state: 'cardOpen' }, '');
-      } else if (selectedArticle) {
-        event.preventDefault();
-        setSelectedArticle(null);
-        window.history.pushState({ state: 'portalOpen' }, '');
-      } else if (hasExplored) {
-        event.preventDefault();
-        setHasExplored(false);
-      }
-    };
+    const handlePopState = () => {
+  if (showDeepContext) {
+    setShowDeepContext(false);
+  } else if (selectedArticle) {
+    setSelectedArticle(null);
+  } else if (hasExplored) {
+    setHasExplored(false);
+  }
+};
 
     if (hasExplored || selectedArticle || showDeepContext) {
-      window.history.pushState({ state: 'active' }, '');
       window.addEventListener('popstate', handlePopState);
     }
     return () => window.removeEventListener('popstate', handlePopState);
   }, [hasExplored, selectedArticle, showDeepContext]);
 
   const openArticleCard = (article) => {
-    setSelectedArticle(article);
-    setShowDeepContext(false);
+  window.history.pushState(
+    { state: "articleOpen" },
+    ""
+  );
+
+  setSelectedArticle(article);
+  setShowDeepContext(false);
   };
 
   return (
@@ -141,7 +142,13 @@ const response = await fetch(
             </p>
 
             <button 
-              onClick={() => setHasExplored(true)}
+              onClick={() => {
+                window.history.pushState(
+                { state: "feedOpen" },
+                ""
+                );
+              setHasExplored(true);
+            }}
               className="w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-sm tracking-wide bg-gradient-to-r from-[#7c3aed] to-[#4f46e5] text-white shadow-xl shadow-purple-600/30 hover:opacity-95 active:scale-95 transition-all"
             >
               Explore Live News
@@ -341,11 +348,15 @@ const response = await fetch(
               {/* TOGGLE CONTROLLER BUTTON */}
               <button
                 onClick={() => {
-                  if (!showDeepContext) {
-                    window.history.pushState({ state: 'deepContextOpen' }, '');
-                  }
-                  setShowDeepContext(!showDeepContext);
-                }}
+                if (!showDeepContext) {
+                window.history.pushState(
+                { state: "deepContextOpen" },
+                ""
+              );
+              }
+
+              setShowDeepContext(!showDeepContext);
+              }}
                 className={`w-full py-3 mb-5 rounded-xl text-xs font-bold uppercase tracking-widest border transition-all active:scale-[0.99] shrink-0 ${showDeepContext ? 'bg-purple-600/20 border-purple-500/40 text-purple-200' : 'bg-[#151233]/70 border-white/[0.05] text-purple-300 hover:bg-[#17143a]/70 hover:text-white'}`}
               >
                 {showDeepContext ? 'Return to Summary' : 'Open Intelligence Analysis'}
