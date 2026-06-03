@@ -65,15 +65,6 @@ const response = await fetch(
     fetchNewsFeed(region, category, true);
   };
 
-  // Scroll visibility for 'Back to Top' element
-//   useEffect(() => {
-//   window.addEventListener("popstate", handlePopState);
-
-//   return () => {
-//     window.removeEventListener("popstate", handlePopState);
-//   };
-// }, [hasExplored, selectedArticle, showDeepContext]);
-
   // 🛡️ HIERARCHICAL HARDWARE BACK-BUTTON INTERCEPT STACK
   useEffect(() => {
     const handlePopState = () => {
