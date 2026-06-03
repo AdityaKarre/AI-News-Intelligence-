@@ -28,10 +28,11 @@ export default function Home() {
     else setIsLoading(true);
 
     try {
-      // 🚀 CONNECTED TO PYTHON MICROSERVICE PORT 8000
-      const response = await fetch(
-  `http://localhost:8000/api/news?region=${currentRegion}&category=${currentCategory}&refresh=${isRefreshAction}`
-    );
+      const API_URL = "https://ai-news-intelligence-platform-1-a84w.onrender.com";
+
+const response = await fetch(
+  `${API_URL}/api/news?region=${currentRegion}&category=${currentCategory}&refresh=${isRefreshAction}`
+);
       const result = await response.json();
       
       if (result.success) {
