@@ -305,6 +305,25 @@ def get_news_stream(
                     print(story_title)
                     print(loop_error)
                     print("===========================\n")
+                    # Fallback when Groq fails
+                    try:
+                        cursor.execute(insert_sql, (
+                            story_title,
+                            true_category if 'true_category' in locals() else normalized_category,
+                            normalized_region,
+                            story_link,
+                            story_snippet[:500],  # Use original article snippet as summary
+                            "AI analysis temporarily unavailable",
+                            "AI analysis temporarily unavailable",
+                            "AI analysis temporarily unavailable",
+                            "",
+                            pub_date
+                        ))
+                        connection.commit()
+                        processed_count += 1
+                        print(f"⚠️ Saved article using fallback mode: {story_title[:45]}...")
+                    except Exception as db_error:
+                        print(f"Fallback save failed: {db_error}")
                     continue
             
             # 6. RETRIEVE ALL ACCUMULATED ACCURATE ENTRIES FROM THE TABLE FOR THIS VIEWPORT
