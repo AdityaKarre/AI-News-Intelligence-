@@ -18,7 +18,8 @@ app = FastAPI(title="🧠 AI News Intelligence Platform Backend Engine")
 # Configure explicit CORS rules to prevent browser fetch rejections
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"], # Whitelists your Next.js frontend port explicitly
+    allow_origins=["http://localhost:3000",
+                    "https://your-vercel-project.vercel.app"], # Whitelists your Next.js frontend port explicitly
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -110,6 +111,13 @@ def format_ai_field(val):
     if isinstance(val, dict):
         return json.dumps(val)
     return str(val).strip() if val else ""
+
+@app.get("/")
+def root():
+    return {
+        "status": "AI News Intelligence Platform Backend Running"
+    }
+
 
 @app.get("/api/news")
 def get_news_stream(
