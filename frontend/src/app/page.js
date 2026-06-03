@@ -340,7 +340,12 @@ const response = await fetch(
 
               {/* TOGGLE CONTROLLER BUTTON */}
               <button
-                onClick={() => setShowDeepContext(!showDeepContext)}
+                onClick={() => {
+                  if (!showDeepContext) {
+                    window.history.pushState({ state: 'deepContextOpen' }, '');
+                  }
+                  setShowDeepContext(!showDeepContext);
+                }}
                 className={`w-full py-3 mb-5 rounded-xl text-xs font-bold uppercase tracking-widest border transition-all active:scale-[0.99] shrink-0 ${showDeepContext ? 'bg-purple-600/20 border-purple-500/40 text-purple-200' : 'bg-[#151233]/70 border-white/[0.05] text-purple-300 hover:bg-[#17143a]/70 hover:text-white'}`}
               >
                 {showDeepContext ? 'Return to Summary' : 'Open Intelligence Analysis'}
