@@ -5,7 +5,7 @@ from groq import Groq
 # Safely load application environment parameters
 load_dotenv()
 
-# Initialize the centralized Groq engine using the llama-3.3-70b-versatile model
+# Initialize the centralized Groq engine using the openai/gpt-oss-120b model
 api_key = os.getenv("GROQ_API_KEY")
 client = Groq(api_key=api_key)
 
@@ -42,7 +42,7 @@ Article Content: {article_text}
 """
     try:
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-120b",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.25,  # Low temperature ensures highly predictable, deterministic summaries
             max_tokens=200
@@ -86,7 +86,7 @@ Article Content: {article_text[:4000]}
 """
     try:
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-120b",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.45,  # Slightly higher temperature grants the narrative professional fluidity
             max_tokens=750
