@@ -1,6 +1,7 @@
 import os
 import datetime
 import json
+import time
 import re
 import requests
 from fastapi import FastAPI
@@ -36,6 +37,15 @@ def get_db_connection():
         port=int(os.environ.get("MYSQLPORT", 3307)), # Verified active local database port
         cursorclass=pymysql.cursors.DictCursor
     )
+# def get_db_connection():
+#     return pymysql.connect(
+#         host=os.environ.get("DB_HOST", "127.0.0.1"),
+#         user=os.environ.get("DB_USER", "root"),
+#         password=os.environ.get("DB_PASSWORD"),
+#         database=os.environ.get("DB_NAME", "ai_news_intelligence"),
+#         port=3307,
+#         cursorclass=pymysql.cursors.DictCursor
+#     )
 
 BYPASS_CACHE_FOR_DEV = False
 
@@ -126,6 +136,8 @@ def get_news_stream(
     ):
     normalized_region = region.lower()
     normalized_category = category.lower()
+
+    start_time = time.time()
     
     print(f"\n⚡ Request received -> Region: [{normalized_region}], Category: [{normalized_category}]")
     
@@ -146,6 +158,8 @@ def get_news_stream(
                 
             cursor.execute(db_query, query_params)
             cached_rows = cursor.fetchall()
+
+            # print(f"⏱ Cache lookup: {time.time() - start_time:.2f} seconds")
             
             if len(cached_rows) >= 6 and not BYPASS_CACHE_FOR_DEV and not refresh:
                 print(f"📦 Serving {len(cached_rows)} articles from local database cache.")
@@ -185,6 +199,7 @@ def get_news_stream(
                     continue
             
             print(f"🔌 Total raw headlines collected from RSS outlets: {len(compiled_raw_headlines)}")
+            # print(f"⏱ RSS Fetch Complete: {time.time() - start_time:.2f} seconds")
             recent_articles = []
 
             for article in compiled_raw_headlines:
@@ -324,6 +339,8 @@ def get_news_stream(
                     except Exception as db_error:
                         print(f"Fallback save failed: {db_error}")
                     continue
+
+            # print(f"⏱ AI Processing Complete: {time.time() - start_time:.2f} seconds")
             
             # 6. RETRIEVE ALL ACCUMULATED ACCURATE ENTRIES FROM THE TABLE FOR THIS VIEWPORT
             cursor.execute(db_query, query_params)
@@ -336,6 +353,7 @@ def get_news_stream(
                 if isinstance(row.get('created_at'), datetime.datetime):
                     row['created_at'] = row['created_at'].isoformat()
                     
+                # print(f"⏱ TOTAL REQUEST TIME: {time.time() - start_time:.2f} seconds")
             return {"success": True, "mode": "groq_70b_live_fetch", "data": final_rows}
             
     finally:

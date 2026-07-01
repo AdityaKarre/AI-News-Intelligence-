@@ -14,6 +14,10 @@ export default function Home() {
   const [category, setCategory] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  const [loadingMessage, setLoadingMessage] = useState(
+  "🌍 Connecting to Global News Sources..."
+  );
   const [showScrollTop, setShowScrollTop] = useState(false);
 
   // Expanded Article States
@@ -29,6 +33,7 @@ export default function Home() {
 
     try {
       const API_URL = "https://ai-news-intelligence-platform-1-a84w.onrender.com";
+      // const API_URL = "http://127.0.0.1:8000";
 
 const response = await fetch(
   `${API_URL}/api/news?region=${currentRegion}&category=${currentCategory}&refresh=${isRefreshAction}`
@@ -54,6 +59,27 @@ const response = await fetch(
       fetchNewsFeed(region, category);
     }
   }, [region, category, hasExplored]);
+
+  useEffect(() => {
+  if (!isLoading) return;
+
+  const messages = [
+    "🌍 Connecting to Global News Sources...",
+    "📰 Fetching Latest Headlines...",
+    "🧠 AI Analyzing Headlines...",
+    "📖 Building Context & Insights...",
+    "🚀 Preparing Your News Feed..."
+  ];
+
+  let index = 0;
+
+  const timer = setInterval(() => {
+    index = (index + 1) % messages.length;
+    setLoadingMessage(messages[index]);
+  }, 1800);
+
+  return () => clearInterval(timer);
+  }, [isLoading]);
 
   // Handle Region Selection Dropdown
   const handleRegionChange = (newRegion) => {
@@ -202,23 +228,57 @@ const response = await fetch(
                 </div>
               </div>
 
-              <button
-                onClick={handleRefresh}
-                disabled={isLoading || isRefreshing}
-                className="w-full relative flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold tracking-wide text-white bg-gradient-to-r from-[#A855F7] via-[#8B5CF6] to-[#6366F1] hover:opacity-95 active:scale-[0.99] disabled:opacity-50 transition-all shadow-lg shadow-purple-600/10"
-              >
-                <RotateCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                Refresh News
-              </button>
+            <button
+              onClick={handleRefresh}
+              disabled={isLoading || isRefreshing}
+              className={`w-full relative flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-bold tracking-wide transition-all duration-300
+                ${
+                  isRefreshing
+                  ? "opacity-60 cursor-not-allowed bg-purple-600/70 text-white"
+                  : "bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-500 hover:to-violet-500 text-white hover:shadow-[0_0_20px_rgba(139,92,246,0.35)]"
+                }`}
+              > 
+                <RotateCw
+                  className={`w-4 h-4 ${
+                  isRefreshing ? "animate-spin" : ""
+                  }`}
+              />
+
+              {isRefreshing ? "Refreshing..." : "Refresh News"}
+            </button>
             </section>
 
             {/* THE DYNAMIC NEWS CARDS VERTICAL FEED LAYER */}
             {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-20 gap-3">
-                <RotateCw className="w-7 h-7 text-purple-400 animate-spin" />
-                <p className="text-xs text-slate-400 font-medium tracking-widest uppercase">Analyzing Live News...</p>
-              </div>
-            ) : articles.length === 0 ? (
+            <>
+            <div className="text-center mb-6">
+              <p className="text-purple-300 text-sm font-semibold tracking-wide transition-all duration-500">
+              {loadingMessage}
+              </p>
+            </div>
+
+            <div className="max-w-3xl mx-auto flex flex-col gap-4 animate-pulse">
+              {[...Array(6)].map((_, index) => (
+              <div
+              key={index}
+              className="rounded-xl bg-[#2D2A55]/80 border border-white/[0.04] p-5"
+            >
+            {/* Category */}
+            <div className="w-20 h-3 rounded bg-purple-400/20 mb-4"></div>
+
+            {/* Title */}
+            <div className="w-full h-5 rounded bg-white/10 mb-3"></div>
+            <div className="w-4/5 h-5 rounded bg-white/10 mb-5"></div>
+
+            {/* Button */}
+            <div className="flex justify-end">
+            <div className="w-28 h-4 rounded bg-purple-400/20"></div>
+            </div>
+          </div>
+            ))}
+          </div>
+           </>
+          ) : articles.length === 0 ? (
               <div className="text-center py-16 border border-dashed border-white/[0.03] rounded-2xl bg-[#0b081e]/20 max-w-3xl mx-auto">
                 <p className="text-slate-400 text-xs font-medium">No breaking updates cataloged in this channel right now.</p>
               </div>
