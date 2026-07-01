@@ -32,7 +32,7 @@ export default function Home() {
     else setIsLoading(true);
 
     try {
-      const API_URL = "https://ai-news-intelligence-platform-1-a84w.onrender.com";
+      const API_URL = "https://ai-news-intelligence-platform-2.onrender.com";
       // const API_URL = "http://127.0.0.1:8000";
 
 const response = await fetch(
