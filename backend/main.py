@@ -32,10 +32,11 @@ def get_db_connection():
     return pymysql.connect(
         host=os.environ.get("MYSQLHOST", "localhost"),
         user=os.environ.get("MYSQLUSER", "root"),
-        password=os.environ.get("MYSQL_ROOT_PASSWORD"), # Verified local password configuration
+        password=os.environ.get("MYSQL_ROOT_PASSWORD"),
         database=os.environ.get("MYSQLDATABASE", "ai_news_intelligence"),
-        port=int(os.environ.get("MYSQLPORT", 3307)), # Verified active local database port
-        cursorclass=pymysql.cursors.DictCursor
+        port=int(os.environ.get("MYSQLPORT", 3307)),
+        cursorclass=pymysql.cursors.DictCursor,
+        ssl={"ssl_mode": "VERIFY_IDENTITY"}
     )
 # def get_db_connection():
 #     return pymysql.connect(

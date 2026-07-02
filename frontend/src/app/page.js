@@ -32,8 +32,8 @@ export default function Home() {
     else setIsLoading(true);
 
     try {
-      const API_URL = "https://ai-news-intelligence-platform-2.onrender.com";
-      // const API_URL = "http://127.0.0.1:8000";
+      // const API_URL = "https://ai-news-intelligence-platform-2.onrender.com";
+      const API_URL = "http://127.0.0.1:8000";
 
 const response = await fetch(
   `${API_URL}/api/news?region=${currentRegion}&category=${currentCategory}&refresh=${isRefreshAction}`
@@ -59,6 +59,22 @@ const response = await fetch(
       fetchNewsFeed(region, category);
     }
   }, [region, category, hasExplored]);
+
+
+
+  useEffect(() => {
+    const handleScroll = () => {
+        setShowScrollTop(window.scrollY > 300);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+
+    return () => {
+        window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
+
 
   useEffect(() => {
   if (!isLoading) return;
@@ -286,7 +302,7 @@ const response = await fetch(
               <div className="flex flex-col gap-3.5 max-w-3xl mx-auto">
                 {articles.map((article) => (
                   <div
-                    key={article.id}
+                    key={article.url}
                     onClick={() => openArticleCard(article)}
                     className="group relative flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 rounded-xl bg-[#2D2A55]/80 hover:-translate-y-1 border border-white/[0.04] hover:border-purple-500/20 cursor-pointer transition-all duration-300 hover:shadow-xl hover:shadow-black/40 gap-3 sm:gap-4"
                     style={{ backdropFilter: 'blur(16px)' }}
