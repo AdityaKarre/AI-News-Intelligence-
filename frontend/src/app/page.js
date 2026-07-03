@@ -32,18 +32,25 @@ export default function Home() {
     else setIsLoading(true);
 
     try {
-      const API_URL = "https://ai-news-intelligence-platform-2.onrender.com";
+      // const API_URL = "https://ai-news-intelligence-platform-2.onrender.com";
+      const API_URL = "https://ai-news-backend-ty0t.onrender.com"
       // const API_URL = "http://127.0.0.1:8000";
 
 const response = await fetch(
   `${API_URL}/api/news?region=${currentRegion}&category=${currentCategory}&refresh=${isRefreshAction}`
 );
+      
       const result = await response.json();
+
+      alert(JSON.stringify(result, null, 2));
+
+      console.log("Backend Response:", result);
+      console.log("Response Status:", response.status);
       
       if (result.success) {
         setArticles(result.data);
       } else {
-        console.error("Backend server error:", result.error);
+        console.error("Backend server error:", result);
       }
     } catch (err) {
       console.error("Failed to connect to backend server node:", err);
