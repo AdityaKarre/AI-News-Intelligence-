@@ -42,22 +42,23 @@ const response = await fetch(
       
       const result = await response.json();
 
-      alert(JSON.stringify(result, null, 2));
+      // alert(JSON.stringify(result, null, 2));
 
       console.log("Backend Response:", result);
       console.log("Response Status:", response.status);
       
-      if (result.status === "success") {
+      if (result.success) {
 
-    console.log("Articles received:", result.news.length);
+    console.log("Articles received:", result.data.length);
 
-    setArticles(result.news);
+    setArticles(result.data);
 
-    } else {
+      } else {
 
     console.error("Backend server error:", result);
 
   }
+
     } catch (err) {
       console.error("Failed to connect to backend server node:", err);
     } finally {
@@ -306,9 +307,6 @@ const response = await fetch(
           </div>
             ))}
           </div>
-          <p className="text-white text-center text-xl">
-                Articles State: {articles.length}
-              </p>
            </>
            
           ) : articles.length === 0 ? (
