@@ -29,6 +29,13 @@ app.add_middleware(
 groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 def get_db_connection():
+    print("===== DATABASE DEBUG =====")
+    print("HOST:", os.environ.get("MYSQLHOST"))
+    print("PORT:", os.environ.get("MYSQLPORT"))
+    print("USER:", os.environ.get("MYSQLUSER"))
+    print("DATABASE:", os.environ.get("MYSQLDATABASE"))
+    print("PASSWORD EXISTS:", bool(os.environ.get("MYSQL_ROOT_PASSWORD")))
+    print("==========================")
     return pymysql.connect(
         host=os.environ.get("MYSQLHOST", "localhost"),
         user=os.environ.get("MYSQLUSER", "root"),
