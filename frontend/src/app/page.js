@@ -47,11 +47,17 @@ const response = await fetch(
       console.log("Backend Response:", result);
       console.log("Response Status:", response.status);
       
-      if (result.success) {
-        setArticles(result.data);
-      } else {
-        console.error("Backend server error:", result);
-      }
+      if (result.status === "success") {
+
+    console.log("Articles received:", result.news.length);
+
+    setArticles(result.news);
+
+    } else {
+
+    console.error("Backend server error:", result);
+
+  }
     } catch (err) {
       console.error("Failed to connect to backend server node:", err);
     } finally {
@@ -300,7 +306,11 @@ const response = await fetch(
           </div>
             ))}
           </div>
+          <p className="text-white text-center text-xl">
+                Articles State: {articles.length}
+              </p>
            </>
+           
           ) : articles.length === 0 ? (
               <div className="text-center py-16 border border-dashed border-white/[0.03] rounded-2xl bg-[#0b081e]/20 max-w-3xl mx-auto">
                 <p className="text-slate-400 text-xs font-medium">No breaking updates cataloged in this channel right now.</p>
