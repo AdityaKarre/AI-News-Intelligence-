@@ -227,13 +227,19 @@ def get_news_stream(
                 print("RSS:", article.get("title", "NO TITLE"))
 
             print(f"Total RSS articles collected: {len(compiled_raw_headlines)}")
-            fresh_headlines = compiled_raw_headlines[:15]
+            fresh_headlines = compiled_raw_headlines
             processed_count = 0
             
             # 4. DATA-GROUNDED NLP EXTRACTION LOOP
             for story in fresh_headlines:
                 if processed_count >= 30: # Optimal grid volume layout balance
                     break
+            
+                insert_sql = """
+                        REPLACE INTO articles 
+                        (title, category, region, url, ai_summary, key_drivers, broader_context, potential_outcomes, ai_insight, published_at)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """
                     
                 story_title = story.get('title', '')
                 story_link = story.get('link', '')
@@ -294,17 +300,18 @@ def get_news_stream(
                     
                     if true_category not in ["technology", "business", "sports", "entertainment", "politics"]:
                         true_category = "politics"
+
+                    print(
+                        f"RSS Category: {normalized_category} | "
+                        f"AI Category: {ai_category} | "
+                        f"Saved As: {true_category}"
+                    )
                     
                     ai_summary = format_ai_field(intelligence_json.get("ai_summary", ""))
                     key_drivers = format_ai_field(intelligence_json.get("key_drivers", ""))
                     broader_context = format_ai_field(intelligence_json.get("broader_context", ""))
                     potential_outcomes = format_ai_field(intelligence_json.get("potential_outcomes", ""))
                     
-                    insert_sql = """
-                        REPLACE INTO articles 
-                        (title, category, region, url, ai_summary, key_drivers, broader_context, potential_outcomes, ai_insight, published_at)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    """
                     
                     cursor.execute(insert_sql, (
                         story_title,
