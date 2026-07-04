@@ -29,13 +29,13 @@ app.add_middleware(
 groq_client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 def get_db_connection():
-    print("===== DATABASE DEBUG =====")
-    print("HOST:", os.environ.get("MYSQLHOST"))
-    print("PORT:", os.environ.get("MYSQLPORT"))
-    print("USER:", os.environ.get("MYSQLUSER"))
-    print("DATABASE:", os.environ.get("MYSQLDATABASE"))
-    print("PASSWORD EXISTS:", bool(os.environ.get("MYSQL_ROOT_PASSWORD")))
-    print("==========================")
+    # print("===== DATABASE DEBUG =====")
+    # print("HOST:", os.environ.get("MYSQLHOST"))
+    # print("PORT:", os.environ.get("MYSQLPORT"))
+    # print("USER:", os.environ.get("MYSQLUSER"))
+    # print("DATABASE:", os.environ.get("MYSQLDATABASE"))
+    # print("PASSWORD EXISTS:", bool(os.environ.get("MYSQL_ROOT_PASSWORD")))
+    # print("==========================")
     return pymysql.connect(
         host=os.environ.get("MYSQLHOST", "localhost"),
         user=os.environ.get("MYSQLUSER", "root"),
@@ -169,7 +169,7 @@ def get_news_stream(
 
             # print(f"⏱ Cache lookup: {time.time() - start_time:.2f} seconds")
             
-            if len(cached_rows) >= 6 and not BYPASS_CACHE_FOR_DEV and not refresh:
+            if len(cached_rows) >= 0 and not BYPASS_CACHE_FOR_DEV and not refresh:
                 print(f"📦 Serving {len(cached_rows)} articles from local database cache.")
                 for row in cached_rows:
                     if isinstance(row.get('published_at'), datetime.datetime):
