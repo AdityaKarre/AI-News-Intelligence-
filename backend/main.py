@@ -226,6 +226,7 @@ def get_news_stream(
             for article in compiled_raw_headlines[:10]:
                 print("RSS:", article.get("title", "NO TITLE"))
 
+            print(f"Total RSS articles collected: {len(compiled_raw_headlines)}")
             fresh_headlines = compiled_raw_headlines[:15]
             processed_count = 0
             
