@@ -33,8 +33,8 @@ export default function Home() {
 
     try {
       // const API_URL = "https://ai-news-intelligence-platform-2.onrender.com";
-      // const API_URL = "https://ai-news-backend-ty0t.onrender.com"
-      const API_URL = "http://127.0.0.1:8000";
+      const API_URL = "https://ai-news-backend-ty0t.onrender.com"
+      // const API_URL = "http://127.0.0.1:8000";
 
 const response = await fetch(
   `${API_URL}/api/news?region=${currentRegion}&category=${currentCategory}&refresh=${isRefreshAction}`
