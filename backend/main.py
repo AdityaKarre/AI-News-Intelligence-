@@ -292,6 +292,10 @@ def get_news_stream(
                         temperature=0.1
                     )
                     
+                    print("\n========== RAW GROQ RESPONSE ==========")
+                    print(chat_completion.choices[0].message.content)
+                    print("=======================================\n")
+
                     intelligence_json = json.loads(chat_completion.choices[0].message.content)
                     
                     # Safeguard: Keep specific feeds locked onto their chosen category channel
