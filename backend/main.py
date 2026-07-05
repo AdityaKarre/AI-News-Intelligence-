@@ -288,7 +288,7 @@ def get_news_stream(
                     chat_completion = groq_client.chat.completions.create(
                         model="llama-3.3-70b-versatile",
                         messages=[{"role": "user", "content": strict_prompt}],
-                        # response_format={"type": "json_object"},
+                        response_format={"type": "json_object"},
                         temperature=0.1
                     )
                     
