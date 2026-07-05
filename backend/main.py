@@ -297,6 +297,10 @@ def get_news_stream(
                     print("=======================================\n")
 
                     intelligence_json = json.loads(chat_completion.choices[0].message.content)
+
+                    print("========== RAW GROQ ==========")
+                    print(chat_completion.choices[0].message.content)
+                    print("==============================")
                     
                     # Safeguard: Keep specific feeds locked onto their chosen category channel
                     ai_category = str(intelligence_json.get("assigned_category", "politics")).lower().strip()
