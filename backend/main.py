@@ -232,6 +232,7 @@ def get_news_stream(
             
             # 4. DATA-GROUNDED NLP EXTRACTION LOOP
             for story in fresh_headlines:
+                print("🚀 STARTING AI PROCESSING FOR:", story_title)
                 if processed_count >= 30: # Optimal grid volume layout balance
                     break
             
@@ -291,6 +292,8 @@ def get_news_stream(
                         response_format={"type": "json_object"},
                         temperature=0.1
                     )
+
+                    print("✅ GROQ CALL FINISHED")
                     
                     print("\n========== RAW GROQ RESPONSE ==========")
                     print(chat_completion.choices[0].message.content)
