@@ -232,6 +232,7 @@ def get_news_stream(
             
             # 4. DATA-GROUNDED NLP EXTRACTION LOOP
             for story in fresh_headlines:
+                story_title = story.get('title', '')
                 print("🚀 STARTING AI PROCESSING FOR:", story_title)
                 if processed_count >= 30: # Optimal grid volume layout balance
                     break
@@ -242,7 +243,7 @@ def get_news_stream(
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """
                     
-                story_title = story.get('title', '')
+                # story_title = story.get('title', '')
                 story_link = story.get('link', '')
                 story_snippet = story.get('summary', story.get('description', story.get('contentSnippet', '')))
                 
