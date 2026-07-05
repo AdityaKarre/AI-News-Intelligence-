@@ -345,10 +345,17 @@ def get_news_stream(
                     
                 except Exception as loop_error:
                     print("\n========== ERROR ==========")
-                    print(story_title)
-                    # print(loop_error)
+                    print("Story:", story_title)
+
                     traceback.print_exc()
-                    print("===========================\n")
+
+                    print("\n========== RAW GROQ RESPONSE ==========")
+                    try:
+                        print(chat_completion.choices[0].message.content)
+                    except Exception:
+                        print("No Groq response received.")
+
+                    print("=======================================\n")
                     # Fallback when Groq fails
                     try:
                         cursor.execute(insert_sql, (
