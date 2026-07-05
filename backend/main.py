@@ -10,6 +10,7 @@ import pymysql
 import feedparser
 from groq import Groq
 from dotenv import load_dotenv
+import traceback
 
 # Load local environment configuration keys
 load_dotenv()
@@ -345,7 +346,8 @@ def get_news_stream(
                 except Exception as loop_error:
                     print("\n========== ERROR ==========")
                     print(story_title)
-                    print(loop_error)
+                    # print(loop_error)
+                    traceback.print_exc()
                     print("===========================\n")
                     # Fallback when Groq fails
                     try:
