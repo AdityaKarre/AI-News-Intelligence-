@@ -19,6 +19,7 @@ export default function Home() {
   "🌍 Connecting to Global News Sources..."
   );
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
 
   // Expanded Article States
   const [selectedArticle, setSelectedArticle] = useState(null);
@@ -33,7 +34,6 @@ export default function Home() {
 
     try {
       const API_URL = "https://ai-news-intelligence-platform-2.onrender.com";
-      // const API_URL = "https://ai-news-backend-ty0t.onrender.com"
       // const API_URL = "http://127.0.0.1:8000";
 
 const response = await fetch(
@@ -87,6 +87,24 @@ const response = await fetch(
     return () => {
         window.removeEventListener("scroll", handleScroll);
     };
+  }, []);
+
+  useEffect(() => {
+  const updateNetworkStatus = () => {
+    setIsOnline(navigator.onLine);
+  };
+
+  // Set initial status
+  updateNetworkStatus();
+
+  // Listen for network changes
+  window.addEventListener("online", updateNetworkStatus);
+  window.addEventListener("offline", updateNetworkStatus);
+
+  return () => {
+    window.removeEventListener("online", updateNetworkStatus);
+    window.removeEventListener("offline", updateNetworkStatus);
+  };
   }, []);
 
 
@@ -152,7 +170,13 @@ const response = await fetch(
 
   return (
     <div className="relative min-h-screen bg-[#1A1833] text-slate-100 font-sans selection:bg-purple-500/30 selection:text-purple-200 overflow-x-hidden">
-      
+      {!isOnline && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-xl bg-red-500/95 border border-red-300 shadow-2xl backdrop-blur-lg">
+          <p className="text-sm font-semibold text-white">
+      ⚠️ You're offline. Connect to the internet to fetch the latest news.
+          </p>
+        </div>
+      )}
       {/* 🔮 BACKGROUND PURPLE AMBIENT RADIAL GLOWS */}
       <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-[#4c1d95]/20 blur-[120px] pointer-events-none z-0" />
       <div className="absolute top-[20%] right-[-15%] w-[45vw] h-[45vw] rounded-full bg-[#1e1b4b]/40 blur-[140px] pointer-events-none z-0" />
