@@ -289,7 +289,7 @@ def get_news_stream(
                     
                     # Using GPT OSS 120B for improved reasoning and structured JSON generation
                     chat_completion = groq_client.chat.completions.create(
-                        model="openai/gpt-oss-120b",
+                        model="openai/gpt-oss-20b",
                         messages=[{"role": "user", "content": strict_prompt}],
                         response_format={"type": "json_object"},
                         temperature=0.1
