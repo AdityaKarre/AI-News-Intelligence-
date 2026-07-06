@@ -287,9 +287,9 @@ def get_news_stream(
                     }}
                     """
                     
-                    # Swapped to llama-3.1-8b-instant to eliminate free-tier Token Rate Limiting issues entirely
+                    # Using GPT OSS 120B for improved reasoning and structured JSON generation
                     chat_completion = groq_client.chat.completions.create(
-                        model="llama-3.3-70b-versatile",
+                        model="openai/gpt-oss-120b",
                         messages=[{"role": "user", "content": strict_prompt}],
                         response_format={"type": "json_object"},
                         temperature=0.1
