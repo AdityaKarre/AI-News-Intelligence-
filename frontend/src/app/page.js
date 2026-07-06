@@ -44,19 +44,19 @@ const response = await fetch(
 
       // alert(JSON.stringify(result, null, 2));
 
-      console.log("Backend Response:", result);
-      console.log("Response Status:", response.status);
+      // console.log("Backend Response:", result);
+      // console.log("Response Status:", response.status);
       
       if (result.success) {
 
-    console.log("Articles received:", result.data.length);
+    // console.log("Articles received:", result.data.length);
 
     setArticles(result.data);
-    alert("Articles loaded: " + result.data.length);
+    // alert("Articles loaded: " + result.data.length);
 
       } else {
 
-    console.error("Backend server error:", result);
+    // console.error("Backend server error:", result);
 
   }
 
